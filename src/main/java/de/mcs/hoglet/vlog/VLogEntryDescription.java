@@ -26,7 +26,7 @@ import de.mcs.utils.GsonUtils;
  */
 public class VLogEntryDescription {
   String containerName;
-  String family;
+  String collection;
   byte[] key;
   int chunkNumber;
   long start;
@@ -93,10 +93,10 @@ public class VLogEntryDescription {
   }
 
   /**
-   * @return the family
+   * @return the collection
    */
-  public String getFamily() {
-    return family;
+  public String getCollection() {
+    return collection;
   }
 
   /**

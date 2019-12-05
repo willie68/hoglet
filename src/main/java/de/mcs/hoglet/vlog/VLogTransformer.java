@@ -9,6 +9,9 @@ package de.mcs.hoglet.vlog;
  */
 public class VLogTransformer {
 
+  private VLogTransformer() {
+  }
+
   public static VLogEntryDescription transformDescriptor2Entry(VLogDescriptor descriptor) {
     return new VLogEntryDescription();
   }

@@ -33,7 +33,6 @@ import java.util.zip.CRC32;
 
 import org.apache.commons.io.input.BoundedInputStream;
 
-import de.mcs.hoglet.ChunkEntry;
 import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.Options;
 import de.mcs.utils.ByteArrayUtils;
@@ -64,10 +63,6 @@ public class VLogFile implements Closeable {
   public static File getFilePathName(File path, int number) {
     String internalName = String.format("vlog_%04d.vlog", number);
     return new File(path, internalName);
-  }
-
-  public static boolean isVLog(ChunkEntry chunk) {
-    return chunk.getContainerName().endsWith(".vlog");
   }
 
   private VLogFile() {
@@ -110,7 +105,7 @@ public class VLogFile implements Closeable {
   private void initLogFile() throws IOException {
     log.debug("creating new vlog file: %s", internalName);
     raf = new RandomAccessFile(vLogFile, "rw");
-    raf.setLength(MAX_VLOG_SIZE);
+    raf.setLength(options.getVlogMaxSize());
     raf.seek(0);
     fileChannel = raf.getChannel();
     chunkCount = 0;
@@ -134,10 +129,10 @@ public class VLogFile implements Closeable {
     raf.close();
   }
 
-  public VLogEntryInfo put(String family, byte[] key, int chunknumber, byte[] chunk) throws IOException {
-    byte[] familyBytes = family.getBytes(StandardCharsets.UTF_8);
-    if (familyBytes.length > VLogDescriptor.KEY_MAX_LENGTH) {
-      throw new HogletDBException("Illegal family length.");
+  public VLogEntryInfo put(String collection, byte[] key, int chunknumber, byte[] chunk) throws IOException {
+    byte[] collectionBytes = collection.getBytes(StandardCharsets.UTF_8);
+    if (collectionBytes.length > VLogDescriptor.KEY_MAX_LENGTH) {
+      throw new HogletDBException("Illegal collection length.");
     }
     if (key.length > VLogDescriptor.KEY_MAX_LENGTH) {
       throw new HogletDBException("Illegal key length.");
@@ -150,16 +145,13 @@ public class VLogFile implements Closeable {
     CRC32 crc32 = new CRC32();
     crc32.update(chunk);
     digest = ByteArrayUtils.longToBytes(crc32.getValue());
-    // ByteArrayInputStream in = new ByteArrayInputStream(chunk);
-    // byte[] digest = HashUtils.hash(messageDigest, in);
-    // in.reset();
 
     VLogEntryInfo info = new VLogEntryInfo();
     info.start = fileChannel.position();
     info.hash = digest;
 
     VLogDescriptor vlogDescriptor = new VLogDescriptor();
-    vlogDescriptor.familyBytes = familyBytes;
+    vlogDescriptor.collectionBytes = collectionBytes;
     vlogDescriptor.key = key;
     vlogDescriptor.chunkNumber = chunknumber;
     vlogDescriptor.hash = digest;
@@ -194,11 +186,12 @@ public class VLogFile implements Closeable {
   }
 
   public byte[] getValue(long offset, int size) throws IOException {
-    RandomAccessFile raf = new RandomAccessFile(vLogFile, "r");
-    raf.seek(offset);
-    byte[] buffer = new byte[size];
-    raf.read(buffer);
-    return buffer;
+    try (RandomAccessFile raf = new RandomAccessFile(vLogFile, "r")) {
+      raf.seek(offset);
+      byte[] buffer = new byte[size];
+      raf.read(buffer);
+      return buffer;
+    }
   }
 
   public long getSize() {
@@ -212,7 +205,7 @@ public class VLogFile implements Closeable {
     if (getSize() > options.getVlogMaxSize()) {
       return false;
     }
-    if (getChunkCount() > options.getVlogMaxChunkCount()) {
+    if (getChunkCount() + 1 > options.getVlogMaxChunkCount()) {
       return false;
     }
     return true;
@@ -274,7 +267,7 @@ public class VLogFile implements Closeable {
               info.chunkNumber = descriptor.chunkNumber;
               info.containerName = getName();
               info.end = position + descriptor.length - 1;
-              info.family = new String(descriptor.familyBytes, StandardCharsets.UTF_8);
+              info.collection = new String(descriptor.collectionBytes, StandardCharsets.UTF_8);
               info.hash = descriptor.hash;
               info.key = descriptor.key;
               info.length = descriptor.length;

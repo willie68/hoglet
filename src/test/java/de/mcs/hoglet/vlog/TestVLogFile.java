@@ -33,15 +33,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
+import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.Options;
 import de.mcs.jmeasurement.JMConfig;
 import de.mcs.jmeasurement.MeasureFactory;
@@ -61,11 +63,13 @@ class TestVLogFile {
   private static final String FAMILY = "EASY";
   private static final String BLOBSTORE_PATH = "h:/temp/blobstore/mydb";
   private static final boolean DELETE_BEFORE_TEST = true;
+  private static final String FAMILY_TOO_LONG = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456";
   private static File filePath;
   private static QueuedIDGenerator ids;
   private static Options options;
   private static Map<String, VLogEntryInfo> myMap;
   private static List<String> myIds;
+  private static File myVLogFile;
 
   /**
    * @throws java.lang.Exception
@@ -85,6 +89,11 @@ class TestVLogFile {
     myMap = new HashMap<>();
   }
 
+  @AfterAll
+  public static void afterAll() {
+    System.out.println(MeasureFactory.asString());
+  }
+
   private static void deleteFolder() throws IOException, InterruptedException {
     filePath = new File(BLOBSTORE_PATH);
     if (filePath.exists()) {
@@ -96,9 +105,13 @@ class TestVLogFile {
 
   @Order(1)
   @Test
-  void testSingleBin() throws IOException, NoSuchAlgorithmException {
+  void testSingleBin() throws IOException, NoSuchAlgorithmException, InterruptedException {
     System.out.println("test single bin");
-    try (VLogFile vLogFile = new VLogFile(options, 1)) {
+    int fileIndex = 1;
+    deleteLogFile(fileIndex);
+
+    try (VLogFile vLogFile = new VLogFile(options, fileIndex)) {
+      assertTrue(vLogFile.isAvailbleForWriting());
       byte[] buffer = new byte[128];
       for (int i = 0; i < buffer.length; i++) {
         if ((i % 10) == 0) {
@@ -132,7 +145,6 @@ class TestVLogFile {
 
       testFileBin(vLogFile, buffer, byteID, info);
     }
-    System.out.println(MeasureFactory.asString());
   }
 
   @Order(2)
@@ -145,12 +157,12 @@ class TestVLogFile {
     Map<byte[], VLogEntryInfo> infos = new HashMap<>();
     VLogEntryInfo info = null;
     try (VLogFile vLogFile = new VLogFile(options, 2)) {
+      myVLogFile = vLogFile.getFile();
       byte[] buffer = new byte[1024 * 1024];
       new Random().nextBytes(buffer);
       for (int i = 1; i <= MAX_DOCS; i++) {
         byte[] id = ids.getByteID();
         descs.add(id);
-        String idStr = UUID.nameUUIDFromBytes(id).toString();
         Monitor m = MeasureFactory.start("write");
         try {
           info = vLogFile.put(FAMILY, id, 1, buffer);
@@ -186,7 +198,13 @@ class TestVLogFile {
   public void testIterator() throws IOException {
     System.out.println("test iterator");
     int count = 0;
-    try (VLogFile vLogFile = new VLogFile(options, 2)) {
+    try (VLogFile vLogFile = new VLogFile(options, myVLogFile)) {
+      assertTrue(vLogFile.isReadOnly());
+      assertFalse(vLogFile.isAvailbleForWriting());
+
+      vLogFile.setReadOnly(true);
+      assertTrue(vLogFile.isReadOnly());
+
       List<VLogEntryDescription> list = new ArrayList<>();
       for (Iterator<VLogEntryDescription> iterator = vLogFile.iterator(); iterator.hasNext();) {
         VLogEntryDescription type = iterator.next();
@@ -205,7 +223,7 @@ class TestVLogFile {
         assertEquals(vLogEntryInfo.startBinary, type.startBinary);
         assertEquals(1, type.chunkNumber);
         assertEquals(vLogFile.getName(), type.containerName);
-        assertEquals("EASY", type.family);
+        assertEquals("EASY", type.collection);
         assertEquals(vLogEntryInfo.getBinarySize(), type.length);
       }
       assertEquals(MAX_DOCS, list.size());
@@ -213,7 +231,6 @@ class TestVLogFile {
     }
 
     System.out.printf("error on id: %d\r\n", ids.getErrorCount());
-    System.out.println(MeasureFactory.asString());
   }
 
   private void testFileBin(VLogFile vLogFile, byte[] buffer, byte[] byteId, VLogEntryInfo info) throws IOException {
@@ -228,8 +245,17 @@ class TestVLogFile {
     } finally {
       m.stop();
     }
-
     assertTrue(Arrays.equals(buffer, out.toByteArray()));
+
+    byte[] value;
+    m = MeasureFactory.start("readBinDirect");
+    try {
+      value = vLogFile.getValue(info.startBinary, info.getBinarySize());
+    } finally {
+      m.stop();
+    }
+    assertNotNull(buffer);
+    assertTrue(Arrays.equals(buffer, value));
 
     out.reset();
     m = MeasureFactory.start("readDescr");
@@ -247,8 +273,154 @@ class TestVLogFile {
     assertEquals(buffer.length, descriptor.length);
     assertEquals(ByteArrayUtils.bytesAsHexString(info.hash), ByteArrayUtils.bytesAsHexString(descriptor.hash));
     assertEquals(ByteArrayUtils.bytesAsHexString(byteId), ByteArrayUtils.bytesAsHexString(descriptor.key));
-    assertEquals(FAMILY, new String(descriptor.familyBytes, StandardCharsets.UTF_8));
+    assertEquals(FAMILY, new String(descriptor.collectionBytes, StandardCharsets.UTF_8));
     assertEquals(1, descriptor.chunkNumber);
+
+    VLogEntryDescription description;
+    m = MeasureFactory.start("readDescrDirect");
+    try {
+      description = vLogFile.getDescription(info.start, info.getDescriptionSize());
+    } finally {
+      m.stop();
+    }
+
+    assertNotNull(description);
+    assertEquals(info.getBinarySize(), descriptor.getLength());
+    assertEquals(buffer.length, descriptor.getLength());
+    assertEquals(ByteArrayUtils.bytesAsHexString(info.hash), ByteArrayUtils.bytesAsHexString(descriptor.getHash()));
+    assertEquals(ByteArrayUtils.bytesAsHexString(byteId), ByteArrayUtils.bytesAsHexString(descriptor.getKey()));
+    assertEquals(FAMILY, new String(descriptor.collectionBytes, StandardCharsets.UTF_8));
+    assertEquals(1, descriptor.getChunkNumber());
   }
 
+  @Order(4)
+  @Test
+  public void testVLogToBig() throws IOException, InterruptedException {
+    System.out.println("testing max. vlog file length");
+    int fileIndex = 3;
+    deleteLogFile(fileIndex);
+
+    List<byte[]> descs = new ArrayList<>();
+
+    Map<byte[], VLogEntryInfo> infos = new HashMap<>();
+    VLogEntryInfo info = null;
+
+    options = Options.defaultOptions().withPath(BLOBSTORE_PATH).withVlogMaxChunkCount(10000)
+        .withVlogMaxSize(128L * 1024L * 1024L);
+
+    try (VLogFile vLogFile = new VLogFile(options, fileIndex)) {
+      myVLogFile = vLogFile.getFile();
+      byte[] buffer = new byte[1024 * 1024];
+      new Random().nextBytes(buffer);
+      for (int i = 1; i <= 130; i++) {
+        byte[] id = ids.getByteID();
+        Monitor m = MeasureFactory.start("write");
+        try {
+          if (i >= 129) {
+            System.out.println("creating " + i + " blob");
+            Assertions.assertThrows(HogletDBException.class, () -> {
+              vLogFile.put(FAMILY, id, 1, buffer);
+            });
+          } else {
+            descs.add(id);
+            info = vLogFile.put(FAMILY, id, 1, buffer);
+          }
+        } finally {
+          m.stop();
+        }
+        if ((i % 100) == 0) {
+          System.out.print(".");
+        }
+        infos.put(id, info);
+      }
+      for (byte[] id : descs) {
+        testFileBin(vLogFile, buffer, id, infos.get(id));
+      }
+    }
+  }
+
+  @Order(5)
+  @Test
+  public void testMaxChunksInVlog() throws IOException, InterruptedException {
+    System.out.println("testing max. chunks in vlog file");
+    int fileIndex = 4;
+    deleteLogFile(fileIndex);
+
+    List<byte[]> descs = new ArrayList<>();
+
+    Map<byte[], VLogEntryInfo> infos = new HashMap<>();
+    VLogEntryInfo info = null;
+
+    options = Options.defaultOptions().withPath(BLOBSTORE_PATH).withVlogMaxChunkCount(999)
+        .withVlogMaxSize(1024L * 1024L * 1024L);
+
+    try (VLogFile vLogFile = new VLogFile(options, fileIndex)) {
+      myVLogFile = vLogFile.getFile();
+      byte[] buffer = new byte[1024 * 1024];
+      new Random().nextBytes(buffer);
+      for (int i = 1; i <= 1000; i++) {
+        byte[] id = ids.getByteID();
+        Monitor m = MeasureFactory.start("write");
+        try {
+          if (i == 1000) {
+            Assertions.assertThrows(HogletDBException.class, () -> {
+              vLogFile.put(FAMILY, id, 1, buffer);
+            });
+          } else {
+            descs.add(id);
+            info = vLogFile.put(FAMILY, id, 1, buffer);
+          }
+        } finally {
+          m.stop();
+        }
+        if ((i % 100) == 0) {
+          System.out.print(".");
+        }
+        infos.put(id, info);
+      }
+      for (byte[] id : descs) {
+
+        // System.out.println(infos.get(id).toString());
+
+        testFileBin(vLogFile, buffer, id, infos.get(id));
+      }
+    }
+  }
+
+  @Test
+  public void testCollectionAndKeyLimits() throws IOException, InterruptedException {
+    System.out.println("test testCollectionAndKeyLimits");
+    int fileIndex = 5;
+    deleteLogFile(fileIndex);
+    try (VLogFile vLogFile = new VLogFile(options, fileIndex)) {
+      assertTrue(vLogFile.isAvailbleForWriting());
+      byte[] buffer = new byte[257];
+      for (int i = 0; i < buffer.length; i++) {
+        if ((i % 10) == 0) {
+          buffer[i] = '#';
+        } else {
+          buffer[i] = (byte) ('0' + (i % 10));
+        }
+      }
+      // new Random().nextBytes(buffer);
+      byte[] byteID = ids.getByteID();
+      Assertions.assertThrows(HogletDBException.class, () -> {
+        vLogFile.put(FAMILY_TOO_LONG, byteID, 1, buffer);
+      });
+
+      Assertions.assertThrows(HogletDBException.class, () -> {
+        vLogFile.put(FAMILY, buffer, 1, buffer);
+      });
+    }
+
+  }
+
+  private void deleteLogFile(int i) throws IOException, InterruptedException {
+    File blobstorePath = new File(BLOBSTORE_PATH);
+    File vlogFile = VLogFile.getFilePathName(blobstorePath, i);
+    if (vlogFile.exists()) {
+      Files.remove(vlogFile, true);
+      Thread.sleep(100);
+    }
+  }
 }

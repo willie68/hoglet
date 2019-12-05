@@ -36,13 +36,13 @@ public class VLogDescriptor {
   static final int HASH_LENGTH = ByteArrayUtils.LONGBYTES;
 
   // because of the headerstructure, 4 bytes DOC_START + 1 byte KEY_LENGTH +
-  // FAMILY + 1 byte KEY_LENGTH + KEY
+  // COLLECTION + 1 byte KEY_LENGTH + KEY
   // itself + 4 bytes Chunknumber + 8 byte length + 32 byte hash + 1 byte
   // DOC_LIMITER
   private static final int HEADER_MAX_LENGTH = DOC_START.length + 1 + KEY_MAX_LENGTH + 1 + KEY_MAX_LENGTH + 4 + 8
       + HASH_LENGTH + DOC_LIMITER.length;
 
-  byte[] familyBytes;
+  byte[] collectionBytes;
   byte[] key;
   int chunkNumber;
   long length;
@@ -61,8 +61,8 @@ public class VLogDescriptor {
     ByteBuffer header = ByteBuffer.allocateDirect(HEADER_MAX_LENGTH);
     header.rewind();
     header.put(DOC_START);
-    header.put((byte) familyBytes.length);
-    header.put(familyBytes);
+    header.put((byte) collectionBytes.length);
+    header.put(collectionBytes);
     header.put((byte) key.length);
     header.put(key);
     header.putInt(chunkNumber);
@@ -81,9 +81,9 @@ public class VLogDescriptor {
     VLogDescriptor vLogPostFix = new VLogDescriptor();
     // don't read the doc seperator
     buffer.get(new byte[4]);
-    int familyLength = buffer.get();
-    vLogPostFix.familyBytes = new byte[familyLength];
-    buffer.get(vLogPostFix.familyBytes);
+    int collectionLength = buffer.get();
+    vLogPostFix.collectionBytes = new byte[collectionLength];
+    buffer.get(vLogPostFix.collectionBytes);
 
     int keyLength = buffer.get();
     vLogPostFix.key = new byte[keyLength];
@@ -103,12 +103,12 @@ public class VLogDescriptor {
 
   public static VLogDescriptor fromByteBufferWithoutStart(ByteBuffer buffer) {
     VLogDescriptor vLogPostFix = new VLogDescriptor();
-    int familyLength = buffer.get();
-    if (familyLength < 1) {
+    int collectionLength = buffer.get();
+    if (collectionLength < 1) {
       return null;
     }
-    vLogPostFix.familyBytes = new byte[familyLength];
-    buffer.get(vLogPostFix.familyBytes);
+    vLogPostFix.collectionBytes = new byte[collectionLength];
+    buffer.get(vLogPostFix.collectionBytes);
 
     int keyLength = buffer.get();
     if (keyLength < 1) {
@@ -139,18 +139,19 @@ public class VLogDescriptor {
   }
 
   /**
-   * @return the familyBytes
+   * @return the collectionBytes
    */
-  public byte[] getFamilyBytes() {
-    return familyBytes;
+  public byte[] getCollectionBytes() {
+    return collectionBytes;
   }
 
   /**
-   * @param familyBytes the familyBytes to set
-   * @return 
+   * @param collectionBytes
+   *          the collectionBytes to set
+   * @return
    */
-  public VLogDescriptor setFamilyBytes(byte[] familyBytes) {
-    this.familyBytes = familyBytes;
+  public VLogDescriptor setCollectionBytes(byte[] collectionBytes) {
+    this.collectionBytes = collectionBytes;
     return this;
   }
 
@@ -162,8 +163,9 @@ public class VLogDescriptor {
   }
 
   /**
-   * @param key the key to set
-   * @return 
+   * @param key
+   *          the key to set
+   * @return
    */
   public VLogDescriptor setKey(byte[] key) {
     this.key = key;
@@ -178,8 +180,9 @@ public class VLogDescriptor {
   }
 
   /**
-   * @param chunkNumber the chunkNumber to set
-   * @return 
+   * @param chunkNumber
+   *          the chunkNumber to set
+   * @return
    */
   public VLogDescriptor setChunkNumber(int chunkNumber) {
     this.chunkNumber = chunkNumber;
@@ -194,8 +197,9 @@ public class VLogDescriptor {
   }
 
   /**
-   * @param length the length to set
-   * @return 
+   * @param length
+   *          the length to set
+   * @return
    */
   public VLogDescriptor setLength(long length) {
     this.length = length;
@@ -207,8 +211,9 @@ public class VLogDescriptor {
   }
 
   /**
-   * @param hash the hash to set
-   * @return 
+   * @param hash
+   *          the hash to set
+   * @return
    */
   public VLogDescriptor setHash(byte[] hash) {
     this.hash = hash;

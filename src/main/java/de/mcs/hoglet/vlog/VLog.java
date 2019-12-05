@@ -71,8 +71,8 @@ public class VLog implements Closeable {
     return vLogFile.getName();
   }
 
-  public VLogEntryInfo put(String family, byte[] key, int chunkNumber, byte[] chunk) throws IOException {
-    return getvLogFile().put(family, key, chunkNumber, chunk);
+  public VLogEntryInfo put(String collection, byte[] key, int chunkNumber, byte[] chunk) throws IOException {
+    return getvLogFile().put(collection, key, chunkNumber, chunk);
   }
 
   public void forReading() {
