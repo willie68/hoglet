@@ -19,28 +19,55 @@
 package de.mcs.hoglet;
 
 import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 
+import org.apache.commons.lang3.StringUtils;
+
+import de.mcs.hoglet.vlog.VLog;
+import de.mcs.hoglet.vlog.VLogEntryInfo;
+import de.mcs.hoglet.vlog.VLogList;
 import de.mcs.utils.ByteArrayUtils;
+import de.mcs.utils.logging.Logger;
 
 /**
  * @author w.klaas
  *
  */
 public class HogletDB implements Closeable {
+  private Logger log = Logger.getLogger(this.getClass());
   private static final String DEFAULT_COLLECTION = "default";
   private Options options;
+  // TODO remove map implementation
   private HashMap<String, byte[]> map;
+
+  private VLogList vLogList;
 
   /**
    * create a new instance of the hoglet key value store with specifig options.
    * 
    * @param options
    *          the options to set for the hoglet db
+   * @throws HogletDBException 
    */
-  public HogletDB(Options options) {
+  public HogletDB(Options options) throws HogletDBException {
     this.options = options;
+    init();
+  }
+
+  private void init() throws HogletDBException {
+    if (StringUtils.isEmpty(options.getPath())) {
+      throw new HogletDBException("path should not be null or empty.");
+    }
+    // trying to check the path
+    File dbFolder = new File(options.getPath());
+    if (!dbFolder.exists()) {
+      dbFolder.mkdirs();
+    }
+    // TODO remove map implementation
     map = new HashMap<String, byte[]>();
+    vLogList = new VLogList(options);
   }
 
   /**
@@ -50,8 +77,8 @@ public class HogletDB implements Closeable {
    *          the key to test
    * @return true if the key is present in the database, otherwise false
    */
-  public boolean contains(byte[] key) {
-    return containsKey(buildPrefixedKey(DEFAULT_COLLECTION, key));
+  public boolean contains(byte[] key) throws HogletDBException {
+    return containsKey(DEFAULT_COLLECTION, key);
   }
 
   /**
@@ -61,8 +88,8 @@ public class HogletDB implements Closeable {
    *          the key to the value
    * @return the value, if the key is not found, the value will be <code>null</code>
    */
-  public byte[] get(byte[] key) {
-    return getKey(buildPrefixedKey(DEFAULT_COLLECTION, key));
+  public byte[] get(byte[] key) throws HogletDBException {
+    return getKey(DEFAULT_COLLECTION, key);
   }
 
   /**
@@ -74,8 +101,8 @@ public class HogletDB implements Closeable {
    *          the value to set
    * @return the value
    */
-  public byte[] put(byte[] key, byte[] value) {
-    return putKey(buildPrefixedKey(DEFAULT_COLLECTION, key), value);
+  public byte[] put(byte[] key, byte[] value) throws HogletDBException {
+    return putKey(DEFAULT_COLLECTION, key, value);
   }
 
   /**
@@ -85,8 +112,8 @@ public class HogletDB implements Closeable {
    *          the key to remove
    * @return the value
    */
-  public byte[] remove(byte[] key) {
-    return removeKey(buildPrefixedKey(DEFAULT_COLLECTION, key));
+  public byte[] remove(byte[] key) throws HogletDBException {
+    return removeKey(DEFAULT_COLLECTION, key);
   }
 
   /**
@@ -95,8 +122,8 @@ public class HogletDB implements Closeable {
    * @param key
    * @return
    */
-  public boolean contains(String collection, byte[] key) {
-    return containsKey(buildPrefixedKey(collection, key));
+  public boolean contains(String collection, byte[] key) throws HogletDBException {
+    return containsKey(collection, key);
   }
 
   /**
@@ -105,8 +132,8 @@ public class HogletDB implements Closeable {
    * @param key
    * @return
    */
-  public byte[] get(String collection, byte[] key) {
-    return getKey(buildPrefixedKey(collection, key));
+  public byte[] get(String collection, byte[] key) throws HogletDBException {
+    return getKey(collection, key);
   }
 
   /**
@@ -115,9 +142,10 @@ public class HogletDB implements Closeable {
    * @param key
    * @param value
    * @return
+   * @throws HogletDBException if something goes wrong 
    */
-  public byte[] put(String collection, byte[] key, byte[] value) {
-    return putKey(buildPrefixedKey(collection, key), value);
+  public byte[] put(String collection, byte[] key, byte[] value) throws HogletDBException {
+    return putKey(collection, key, value);
   }
 
   /**
@@ -126,8 +154,8 @@ public class HogletDB implements Closeable {
    * @param key
    * @return
    */
-  public byte[] remove(String collection, byte[] key) {
-    return removeKey(buildPrefixedKey(collection, key));
+  public byte[] remove(String collection, byte[] key) throws HogletDBException {
+    return removeKey(collection, key);
   }
 
   /**
@@ -140,9 +168,6 @@ public class HogletDB implements Closeable {
    * @return combination of collection and key
    */
   private byte[] buildPrefixedKey(String collection, byte[] key) {
-    if (collection.contains(new String(new byte[] { 0 }))) {
-      throw new IllegalArgumentException("collection name should not contain any null values.");
-    }
     // todo create a faster key builder
     byte[] colBytes = collection.getBytes();
     byte[] buffer = new byte[colBytes.length + key.length + 1];
@@ -160,24 +185,41 @@ public class HogletDB implements Closeable {
     return buffer;
   }
 
-  private boolean containsKey(byte[] key) {
+  private void checkCollectionName(String collection) {
+    if (collection.contains(new String(new byte[] { 0 }))) {
+      throw new IllegalArgumentException("collection name should not contain any null values.");
+    }
+  }
+
+  private boolean containsKey(String collection, byte[] key) {
+    checkCollectionName(collection);
     return map.containsKey(ByteArrayUtils.bytesAsHexString(key));
   }
 
-  private byte[] getKey(byte[] key) {
+  private byte[] getKey(String collection, byte[] key) {
+    checkCollectionName(collection);
     return map.get(ByteArrayUtils.bytesAsHexString(key));
   }
 
-  private byte[] putKey(byte[] key, byte[] value) {
+  private byte[] putKey(String collection, byte[] key, byte[] value) throws HogletDBException {
+    checkCollectionName(collection);
+    try {
+      VLog vLog = vLogList.getNextAvailableVLog();
+      log.debug("putting into vlog file %s", vLog.getName());
+      VLogEntryInfo put = vLog.put(collection, key, 0, value);
+    } catch (IOException e) {
+      throw new HogletDBException(e);
+    }
     return map.put(ByteArrayUtils.bytesAsHexString(key), value);
   }
 
-  private byte[] removeKey(byte[] key) {
+  private byte[] removeKey(String collection, byte[] key) {
+    checkCollectionName(collection);
     return map.remove(ByteArrayUtils.bytesAsHexString(key));
   }
 
   @Override
   public void close() {
-    // TODO nothing to do here, at the moment
+    vLogList.close();
   }
 }

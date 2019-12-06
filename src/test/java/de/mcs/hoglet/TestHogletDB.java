@@ -25,14 +25,19 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import de.mcs.utils.Files;
 
 /**
  * @author wklaa_000
@@ -40,20 +45,46 @@ import org.junit.jupiter.api.Test;
  */
 public class TestHogletDB {
 
+  private static final String DB_FOLDER_PATH = "e:/temp/hogletdb/";
   private HogletDB hogletDB;
+  private static File dbFolder;
+
+  @BeforeAll
+  public static void beforeAll() throws IOException, InterruptedException {
+    deleteFolder();
+  }
+
+  private static void deleteFolder() throws IOException, InterruptedException {
+    dbFolder = new File(DB_FOLDER_PATH);
+    if (dbFolder.exists()) {
+      Files.remove(dbFolder, true);
+      Thread.sleep(100);
+    }
+    dbFolder.mkdirs();
+  }
 
   @BeforeEach
-  public void before() {
-    hogletDB = new HogletDB(Options.defaultOptions());
+  public void before() throws HogletDBException {
+    hogletDB = new HogletDB(Options.defaultOptions().withPath(DB_FOLDER_PATH));
   }
 
   @AfterEach
   public void after() {
-    hogletDB.close();
+    if (hogletDB != null) {
+      hogletDB.close();
+    }
   }
 
   @Test
-  public void testCRUD() {
+  public void testEmptyPath() {
+    Assertions.assertThrows(HogletDBException.class, () -> {
+      try (HogletDB myHogletDB = new HogletDB(Options.defaultOptions())) {
+      }
+    });
+  }
+
+  @Test
+  public void testCRUD() throws HogletDBException {
     byte[] key = UUID.randomUUID().toString().getBytes();
 
     byte[] value = new byte[1024];
@@ -86,7 +117,7 @@ public class TestHogletDB {
   }
 
   @Test
-  public void testCRUDWithCollection() {
+  public void testCRUDWithCollection() throws HogletDBException {
     String collection = "MCS";
     byte[] key = UUID.randomUUID().toString().getBytes();
 

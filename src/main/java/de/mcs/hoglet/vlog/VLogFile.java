@@ -162,7 +162,7 @@ public class VLogFile implements Closeable {
     fileChannel.write(ByteBuffer.wrap(chunk));
     info.end = fileChannel.position() - 1;
     fileChannel.force(false);
-
+    info.setvLogName(getName());
     chunkCount++;
     return info;
   }

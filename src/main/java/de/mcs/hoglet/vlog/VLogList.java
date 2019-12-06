@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
-import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.ChunkEntry;
+import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.Options;
 import de.mcs.utils.caches.KeyAlreadyExistsException;
 import de.mcs.utils.caches.ObjectCache;

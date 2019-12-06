@@ -29,6 +29,7 @@ public class VLogEntryInfo {
   long startBinary;
   long end;
   byte[] hash;
+  private String vLogName;
 
   /**
    * @return the start
@@ -107,6 +108,20 @@ public class VLogEntryInfo {
   public VLogEntryInfo setHash(byte[] hash) {
     this.hash = hash;
     return this;
+  }
+
+  /**
+   * @return the vLogName
+   */
+  public String getvLogName() {
+    return vLogName;
+  }
+
+  /**
+   * @param vLogName the vLogName to set
+   */
+  public void setvLogName(String vLogName) {
+    this.vLogName = vLogName;
   }
 
 }
