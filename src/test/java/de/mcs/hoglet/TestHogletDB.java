@@ -21,9 +21,7 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import de.mcs.utils.Files;
+import de.mcs.utils.SystemHelper;
 
 /**
  * @author wklaa_000
@@ -46,6 +45,8 @@ import de.mcs.utils.Files;
 public class TestHogletDB {
 
   private static final String DB_FOLDER_PATH = "e:/temp/hogletdb/";
+  private static final String EASY_DB_FOLDER_PATH = "h:/temp/hogletdb/";
+
   private HogletDB hogletDB;
   private static File dbFolder;
 
@@ -56,6 +57,9 @@ public class TestHogletDB {
 
   private static void deleteFolder() throws IOException, InterruptedException {
     dbFolder = new File(DB_FOLDER_PATH);
+    if ("CBP1ZF2".equals(SystemHelper.getComputerName())) {
+      dbFolder = new File(EASY_DB_FOLDER_PATH);
+    }
     if (dbFolder.exists()) {
       Files.remove(dbFolder, true);
       Thread.sleep(100);
@@ -65,7 +69,7 @@ public class TestHogletDB {
 
   @BeforeEach
   public void before() throws HogletDBException {
-    hogletDB = new HogletDB(Options.defaultOptions().withPath(DB_FOLDER_PATH));
+    hogletDB = new HogletDB(Options.defaultOptions().withPath(dbFolder.getAbsolutePath()));
   }
 
   @AfterEach

@@ -18,10 +18,7 @@
  */
 package de.mcs.hoglet.vlog;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -54,6 +51,7 @@ import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.ByteArrayUtils;
 import de.mcs.utils.Files;
 import de.mcs.utils.QueuedIDGenerator;
+import de.mcs.utils.SystemHelper;
 
 /**
  * @author w.klaas
@@ -65,6 +63,7 @@ class TestVLogFile {
   private static final int MAX_DOCS = 1000;
   private static final String FAMILY = "EASY";
   private static final String BLOBSTORE_PATH = "e:/temp/blobstore/mydb";
+  private static final String EASY_BLOBSTORE_PATH = "h:/temp/blobstore/mydb";
   private static final boolean DELETE_BEFORE_TEST = true;
   private static final String FAMILY_TOO_LONG = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456";
   private static File filePath;
@@ -86,7 +85,7 @@ class TestVLogFile {
     if (DELETE_BEFORE_TEST) {
       deleteFolder();
     }
-    options = Options.defaultOptions().withPath(BLOBSTORE_PATH).withVlogMaxChunkCount(10000)
+    options = Options.defaultOptions().withPath(filePath.getAbsolutePath()).withVlogMaxChunkCount(10000)
         .withVlogMaxSize(2048L * 1024L * 1024L);
     myIds = new ArrayList<>();
     myMap = new HashMap<>();
@@ -99,6 +98,9 @@ class TestVLogFile {
 
   private static void deleteFolder() throws IOException, InterruptedException {
     filePath = new File(BLOBSTORE_PATH);
+    if ("CBP1ZF2".equals(SystemHelper.getComputerName())) {
+      filePath = new File(EASY_BLOBSTORE_PATH);
+    }
     if (filePath.exists()) {
       Files.remove(filePath, true);
       Thread.sleep(100);
@@ -308,10 +310,10 @@ class TestVLogFile {
     Map<byte[], VLogEntryInfo> infos = new HashMap<>();
     VLogEntryInfo info = null;
 
-    options = Options.defaultOptions().withPath(BLOBSTORE_PATH).withVlogMaxChunkCount(10000)
+    Options myOptions = Options.defaultOptions().withPath(filePath.getAbsolutePath()).withVlogMaxChunkCount(10000)
         .withVlogMaxSize(128L * 1024L * 1024L);
 
-    try (VLogFile vLogFile = new VLogFile(options, fileIndex)) {
+    try (VLogFile vLogFile = new VLogFile(myOptions, fileIndex)) {
       myVLogFile = vLogFile.getFile();
       byte[] buffer = new byte[1024 * 1024];
       new Random().nextBytes(buffer);
@@ -354,10 +356,10 @@ class TestVLogFile {
     Map<byte[], VLogEntryInfo> infos = new HashMap<>();
     VLogEntryInfo info = null;
 
-    options = Options.defaultOptions().withPath(BLOBSTORE_PATH).withVlogMaxChunkCount(999)
+    Options myOptions = Options.defaultOptions().withPath(filePath.getAbsolutePath()).withVlogMaxChunkCount(999)
         .withVlogMaxSize(1024L * 1024L * 1024L);
 
-    try (VLogFile vLogFile = new VLogFile(options, fileIndex)) {
+    try (VLogFile vLogFile = new VLogFile(myOptions, fileIndex)) {
       myVLogFile = vLogFile.getFile();
       byte[] buffer = new byte[1024 * 1024];
       new Random().nextBytes(buffer);
@@ -419,8 +421,7 @@ class TestVLogFile {
   }
 
   private void deleteLogFile(int i) throws IOException, InterruptedException {
-    File blobstorePath = new File(BLOBSTORE_PATH);
-    File vlogFile = VLogFile.getFilePathName(blobstorePath, i);
+    File vlogFile = VLogFile.getFilePathName(filePath, i);
     if (vlogFile.exists()) {
       Files.remove(vlogFile, true);
       Thread.sleep(100);
