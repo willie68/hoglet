@@ -18,15 +18,19 @@
  */
 package de.mcs.hoglet;
 
-import java.nio.ByteBuffer;
+import java.io.Closeable;
+import java.util.HashMap;
+
+import de.mcs.utils.ByteArrayUtils;
 
 /**
  * @author w.klaas
  *
  */
-public class HogletDB {
+public class HogletDB implements Closeable {
   private static final String DEFAULT_COLLECTION = "default";
   private Options options;
+  private HashMap<String, byte[]> map;
 
   /**
    * create a new instance of the hoglet key value store with specifig options.
@@ -36,6 +40,7 @@ public class HogletDB {
    */
   public HogletDB(Options options) {
     this.options = options;
+    map = new HashMap<String, byte[]>();
   }
 
   /**
@@ -139,26 +144,40 @@ public class HogletDB {
       throw new IllegalArgumentException("collection name should not contain any null values.");
     }
     // todo create a faster key builder
-    ByteBuffer buffer = ByteBuffer.allocate(collection.length() + key.length + 1);
-    buffer.put(collection.getBytes());
-    buffer.put((byte) 0);
-    buffer.put(key);
-    return buffer.array();
+    byte[] colBytes = collection.getBytes();
+    byte[] buffer = new byte[colBytes.length + key.length + 1];
+    int x = 0;
+    for (int i = 0; i < colBytes.length; i++) {
+      buffer[x] = colBytes[i];
+      x++;
+    }
+    buffer[x] = (byte) 0;
+    x++;
+    for (int i = 0; i < key.length; i++) {
+      buffer[x] = key[i];
+      x++;
+    }
+    return buffer;
   }
 
   private boolean containsKey(byte[] key) {
-    return false;
+    return map.containsKey(ByteArrayUtils.bytesAsHexString(key));
   }
 
   private byte[] getKey(byte[] key) {
-    return null;
+    return map.get(ByteArrayUtils.bytesAsHexString(key));
   }
 
   private byte[] putKey(byte[] key, byte[] value) {
-    return null;
+    return map.put(ByteArrayUtils.bytesAsHexString(key), value);
   }
 
   private byte[] removeKey(byte[] key) {
-    return null;
+    return map.remove(ByteArrayUtils.bytesAsHexString(key));
+  }
+
+  @Override
+  public void close() {
+    // TODO nothing to do here, at the moment
   }
 }

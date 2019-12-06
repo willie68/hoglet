@@ -18,7 +18,10 @@
  */
 package de.mcs.hoglet.vlog;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -61,7 +64,7 @@ class TestVLogFile {
 
   private static final int MAX_DOCS = 1000;
   private static final String FAMILY = "EASY";
-  private static final String BLOBSTORE_PATH = "h:/temp/blobstore/mydb";
+  private static final String BLOBSTORE_PATH = "e:/temp/blobstore/mydb";
   private static final boolean DELETE_BEFORE_TEST = true;
   private static final String FAMILY_TOO_LONG = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456";
   private static File filePath;
