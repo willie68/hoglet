@@ -30,12 +30,15 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.jmeasurement.MeasureFactory;
+import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.Files;
 import de.mcs.utils.SystemHelper;
 
@@ -54,6 +57,11 @@ public class TestHogletDB {
   @BeforeAll
   public static void beforeAll() throws IOException, InterruptedException {
     deleteFolder();
+  }
+
+  @AfterAll
+  public static void afterAll() {
+    System.out.println(MeasureFactory.asString());
   }
 
   private static void deleteFolder() throws IOException, InterruptedException {
@@ -168,7 +176,8 @@ public class TestHogletDB {
     });
 
     Assertions.assertThrows(IllegalArgumentException.class, () -> {
-      assertNull(hogletDB.get(collection, key));
+      byte[] bs = hogletDB.get(collection, key);
+      assertNull(bs);
     });
 
     Assertions.assertThrows(IllegalArgumentException.class, () -> {
@@ -185,18 +194,25 @@ public class TestHogletDB {
     String collection = "MCS0003";
     byte[] key = UUID.randomUUID().toString().getBytes();
 
-    byte[] value = new byte[1024];
+    byte[] value = new byte[1024 * 1024];
     new Random().nextBytes(value);
 
     try (ChunkList chunks = hogletDB.createChunk(collection, key)) {
       for (int i = 0; i < 10; i++) {
-        chunks.addChunk(i, value);
+        Monitor m = MeasureFactory.start("writeChunk");
+        try {
+          chunks.addChunk(i, value);
+        } finally {
+          m.stop();
+        }
       }
-      System.out.println("wait");
     }
 
+    byte[] newValue = new byte[1024 * 1024];
     try (InputStream input = hogletDB.getAsStream(collection, key)) {
-
+      assertNotNull(input);
+      int read = input.read(newValue);
+      assertTrue(Arrays.equals(value, newValue));
     }
   }
 }

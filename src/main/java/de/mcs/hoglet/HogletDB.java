@@ -220,6 +220,7 @@ public class HogletDB implements Closeable {
   }
 
   public InputStream getAsStream(String collection, byte[] key) {
+
     return null;
   }
 
