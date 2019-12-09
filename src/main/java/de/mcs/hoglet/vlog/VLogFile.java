@@ -34,6 +34,7 @@ import java.util.zip.CRC32;
 import org.apache.commons.io.input.BoundedInputStream;
 
 import de.mcs.hoglet.HogletDBException;
+import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
 import de.mcs.utils.ByteArrayUtils;
 import de.mcs.utils.HashUtils.Algorithm;
@@ -129,7 +130,8 @@ public class VLogFile implements Closeable {
     raf.close();
   }
 
-  public VLogEntryInfo put(String collection, byte[] key, int chunknumber, byte[] chunk) throws IOException {
+  public VLogEntryInfo put(String collection, byte[] key, int chunknumber, byte[] chunk, Operation operation)
+      throws IOException {
     byte[] collectionBytes = collection.getBytes(StandardCharsets.UTF_8);
     if (collectionBytes.length > VLogDescriptor.KEY_MAX_LENGTH) {
       throw new HogletDBException("Illegal collection length.");
@@ -156,6 +158,7 @@ public class VLogFile implements Closeable {
     vlogDescriptor.chunkNumber = chunknumber;
     vlogDescriptor.hash = digest;
     vlogDescriptor.length = chunk.length;
+    vlogDescriptor.operation = operation;
     // write the binary data
     fileChannel.write(vlogDescriptor.getBytes());
     info.startBinary = fileChannel.position();

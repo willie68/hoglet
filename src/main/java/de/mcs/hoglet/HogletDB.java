@@ -21,6 +21,7 @@ package de.mcs.hoglet;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 
 import org.apache.commons.lang3.StringUtils;
@@ -159,6 +160,16 @@ public class HogletDB implements Closeable {
   }
 
   /**
+   * starting a new chunked add
+   * @param collection
+   * @param key
+   * @return ChunkList
+   */
+  public ChunkList createChunk(String collection, byte[] key) {
+    return ChunkList.newChunkList().withCollection(collection).withKey(key).withHogletDB(this);
+  }
+
+  /**
    * building the real key for the lsm tree store. A collection is only a prefix to the key.
    * 
    * @param collection
@@ -206,7 +217,7 @@ public class HogletDB implements Closeable {
     try {
       VLog vLog = vLogList.getNextAvailableVLog();
       log.debug("putting into vlog file %s", vLog.getName());
-      VLogEntryInfo put = vLog.put(collection, key, 0, value);
+      VLogEntryInfo put = vLog.put(collection, key, 0, value, Operation.ADD);
     } catch (IOException e) {
       throw new HogletDBException(e);
     }
@@ -221,5 +232,13 @@ public class HogletDB implements Closeable {
   @Override
   public void close() {
     vLogList.close();
+  }
+
+  public InputStream getAsStream(String collection, byte[] key) {
+    return null;
+  }
+
+  public VLogList getVLogList() {
+    return vLogList;
   }
 }

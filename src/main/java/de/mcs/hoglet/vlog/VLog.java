@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantLock;
 
+import de.mcs.hoglet.Operation;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -71,8 +72,9 @@ public class VLog implements Closeable {
     return vLogFile.getName();
   }
 
-  public VLogEntryInfo put(String collection, byte[] key, int chunkNumber, byte[] chunk) throws IOException {
-    return getvLogFile().put(collection, key, chunkNumber, chunk);
+  public VLogEntryInfo put(String collection, byte[] key, int chunkNumber, byte[] chunk, Operation operation)
+      throws IOException {
+    return getvLogFile().put(collection, key, chunkNumber, chunk, operation);
   }
 
   public void forReading() {

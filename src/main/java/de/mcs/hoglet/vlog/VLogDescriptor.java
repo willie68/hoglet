@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+import de.mcs.hoglet.Operation;
 import de.mcs.utils.ByteArrayUtils;
 
 /**
@@ -47,6 +48,7 @@ public class VLogDescriptor {
   int chunkNumber;
   long length;
   byte[] hash;
+  Operation operation;
 
   VLogDescriptor() {
     length = 0;
@@ -67,6 +69,7 @@ public class VLogDescriptor {
     header.put(key);
     header.putInt(chunkNumber);
     header.putLong(length);
+    header.putInt(operation.ordinal());
     header.put(hash);
     header.put(DOC_LIMITER);
     byte[] padding = new byte[header.remaining()];
@@ -91,6 +94,8 @@ public class VLogDescriptor {
 
     vLogPostFix.chunkNumber = buffer.getInt();
     vLogPostFix.length = buffer.getLong();
+    int opValue = buffer.getInt();
+    vLogPostFix.operation = Operation.values()[opValue];
     vLogPostFix.hash = new byte[HASH_LENGTH];
     buffer.get(vLogPostFix.hash);
     return vLogPostFix;
@@ -125,6 +130,9 @@ public class VLogDescriptor {
     if (vLogPostFix.length < 0) {
       return null;
     }
+    int opValue = buffer.getInt();
+    vLogPostFix.operation = Operation.values()[opValue];
+
     vLogPostFix.hash = new byte[HASH_LENGTH];
     buffer.get(vLogPostFix.hash);
     return vLogPostFix;

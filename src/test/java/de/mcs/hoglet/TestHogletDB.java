@@ -21,10 +21,13 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.UUID;
@@ -177,5 +180,24 @@ public class TestHogletDB {
     Assertions.assertThrows(IllegalArgumentException.class, () -> {
       hogletDB.remove(collection, key);
     });
+  }
+
+  @Test
+  public void testChunkUpload() throws IOException {
+    String collection = "MCS0003";
+    byte[] key = UUID.randomUUID().toString().getBytes();
+
+    byte[] value = new byte[1024];
+    new Random().nextBytes(value);
+
+    try (ChunkList chunks = hogletDB.createChunk(collection, key)) {
+      for (int i = 0; i < 10; i++) {
+        chunks.addChunk(i, value);
+      }
+    }
+
+    try (InputStream input = hogletDB.getAsStream(collection, key)) {
+
+    }
   }
 }

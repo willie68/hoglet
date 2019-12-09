@@ -18,7 +18,10 @@
  */
 package de.mcs.hoglet.vlog;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -44,6 +47,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import de.mcs.hoglet.HogletDBException;
+import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
 import de.mcs.jmeasurement.JMConfig;
 import de.mcs.jmeasurement.MeasureFactory;
@@ -131,7 +135,7 @@ class TestVLogFile {
 
       Monitor m = MeasureFactory.start("write");
       try {
-        info = vLogFile.put(FAMILY, byteID, 1, buffer);
+        info = vLogFile.put(FAMILY, byteID, 1, buffer, Operation.ADD);
       } finally {
         m.stop();
       }
@@ -141,7 +145,7 @@ class TestVLogFile {
       byteID = ids.getByteID();
       m = MeasureFactory.start("write");
       try {
-        info = vLogFile.put(FAMILY, byteID, 1, buffer);
+        info = vLogFile.put(FAMILY, byteID, 1, buffer, Operation.ADD);
       } finally {
         m.stop();
       }
@@ -170,7 +174,7 @@ class TestVLogFile {
         descs.add(id);
         Monitor m = MeasureFactory.start("write");
         try {
-          info = vLogFile.put(FAMILY, id, 1, buffer);
+          info = vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
         } finally {
           m.stop();
         }
@@ -324,11 +328,11 @@ class TestVLogFile {
           if (i >= 129) {
             System.out.println("creating " + i + " blob");
             Assertions.assertThrows(HogletDBException.class, () -> {
-              vLogFile.put(FAMILY, id, 1, buffer);
+              vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
             });
           } else {
             descs.add(id);
-            info = vLogFile.put(FAMILY, id, 1, buffer);
+            info = vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
           }
         } finally {
           m.stop();
@@ -369,11 +373,11 @@ class TestVLogFile {
         try {
           if (i == 1000) {
             Assertions.assertThrows(HogletDBException.class, () -> {
-              vLogFile.put(FAMILY, id, 1, buffer);
+              vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
             });
           } else {
             descs.add(id);
-            info = vLogFile.put(FAMILY, id, 1, buffer);
+            info = vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
           }
         } finally {
           m.stop();
@@ -410,11 +414,11 @@ class TestVLogFile {
       // new Random().nextBytes(buffer);
       byte[] byteID = ids.getByteID();
       Assertions.assertThrows(HogletDBException.class, () -> {
-        vLogFile.put(FAMILY_TOO_LONG, byteID, 1, buffer);
+        vLogFile.put(FAMILY_TOO_LONG, byteID, 1, buffer, Operation.ADD);
       });
 
       Assertions.assertThrows(HogletDBException.class, () -> {
-        vLogFile.put(FAMILY, buffer, 1, buffer);
+        vLogFile.put(FAMILY, buffer, 1, buffer, Operation.ADD);
       });
     }
 
