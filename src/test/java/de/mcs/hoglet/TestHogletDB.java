@@ -192,7 +192,6 @@ public class TestHogletDB {
       for (int i = 0; i < 10; i++) {
         chunks.addChunk(i, value);
       }
-
       System.out.println("wait");
     }
 

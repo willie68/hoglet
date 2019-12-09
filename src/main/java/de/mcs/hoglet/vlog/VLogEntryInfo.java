@@ -19,6 +19,7 @@
 package de.mcs.hoglet.vlog;
 
 import de.mcs.utils.ByteArrayUtils;
+import de.mcs.utils.GsonUtils;
 
 /**
  * @author w.klaas
@@ -118,10 +119,30 @@ public class VLogEntryInfo {
   }
 
   /**
-   * @param vLogName the vLogName to set
+   * @param vLogName
+   *          the vLogName to set
    */
   public void setvLogName(String vLogName) {
     this.vLogName = vLogName;
   }
 
+  /**
+   * getting the representing json from this object
+   * 
+   * @return String
+   */
+  public String asJson() {
+    return GsonUtils.getJsonMapper().toJson(this);
+  }
+
+  /**
+   * creating a VLogEntryInfo from json string
+   * 
+   * @param json
+   *          the json representation
+   * @return VLogEntryInfo
+   */
+  public static VLogEntryInfo fromJson(String json) {
+    return GsonUtils.getJsonMapper().fromJson(json, VLogEntryInfo.class);
+  }
 }

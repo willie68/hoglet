@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
 import org.apache.commons.lang3.StringUtils;
@@ -29,7 +30,6 @@ import org.apache.commons.lang3.StringUtils;
 import de.mcs.hoglet.vlog.VLog;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.hoglet.vlog.VLogList;
-import de.mcs.utils.ByteArrayUtils;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -44,13 +44,14 @@ public class HogletDB implements Closeable {
   private HashMap<String, byte[]> map;
 
   private VLogList vLogList;
+  private SortedMemoryTable memoryTable;
 
   /**
    * create a new instance of the hoglet key value store with specifig options.
    * 
    * @param options
    *          the options to set for the hoglet db
-   * @throws HogletDBException 
+   * @throws HogletDBException
    */
   public HogletDB(Options options) throws HogletDBException {
     this.options = options;
@@ -67,8 +68,8 @@ public class HogletDB implements Closeable {
       dbFolder.mkdirs();
     }
     // TODO remove map implementation
-    map = new HashMap<String, byte[]>();
     vLogList = new VLogList(options);
+    memoryTable = new SortedMemoryTable(options);
   }
 
   /**
@@ -143,7 +144,8 @@ public class HogletDB implements Closeable {
    * @param key
    * @param value
    * @return
-   * @throws HogletDBException if something goes wrong 
+   * @throws HogletDBException
+   *           if something goes wrong
    */
   public byte[] put(String collection, byte[] key, byte[] value) throws HogletDBException {
     return putKey(collection, key, value);
@@ -161,6 +163,7 @@ public class HogletDB implements Closeable {
 
   /**
    * starting a new chunked add
+   * 
    * @param collection
    * @param key
    * @return ChunkList
@@ -169,64 +172,46 @@ public class HogletDB implements Closeable {
     return ChunkList.newChunkList().withCollection(collection).withKey(key).withHogletDB(this);
   }
 
-  /**
-   * building the real key for the lsm tree store. A collection is only a prefix to the key.
-   * 
-   * @param collection
-   *          the collection to set
-   * @param key
-   *          the key to the value
-   * @return combination of collection and key
-   */
-  private byte[] buildPrefixedKey(String collection, byte[] key) {
-    // todo create a faster key builder
-    byte[] colBytes = collection.getBytes();
-    byte[] buffer = new byte[colBytes.length + key.length + 1];
-    int x = 0;
-    for (int i = 0; i < colBytes.length; i++) {
-      buffer[x] = colBytes[i];
-      x++;
-    }
-    buffer[x] = (byte) 0;
-    x++;
-    for (int i = 0; i < key.length; i++) {
-      buffer[x] = key[i];
-      x++;
-    }
-    return buffer;
-  }
-
-  private void checkCollectionName(String collection) {
-    if (collection.contains(new String(new byte[] { 0 }))) {
-      throw new IllegalArgumentException("collection name should not contain any null values.");
-    }
-  }
-
   private boolean containsKey(String collection, byte[] key) {
-    checkCollectionName(collection);
-    return map.containsKey(ByteArrayUtils.bytesAsHexString(key));
+    return memoryTable.containsKey(collection, key);
   }
 
-  private byte[] getKey(String collection, byte[] key) {
-    checkCollectionName(collection);
-    return map.get(ByteArrayUtils.bytesAsHexString(key));
-  }
-
-  private byte[] putKey(String collection, byte[] key, byte[] value) throws HogletDBException {
-    checkCollectionName(collection);
-    try {
-      VLog vLog = vLogList.getNextAvailableVLog();
-      log.debug("putting into vlog file %s", vLog.getName());
-      VLogEntryInfo put = vLog.put(collection, key, 0, value, Operation.ADD);
+  private byte[] getKey(String collection, byte[] key) throws HogletDBException {
+    byte[] bs = memoryTable.get(collection, key);
+    if (bs == null) {
+      return null;
+    }
+    VLogEntryInfo info = VLogEntryInfo.fromJson(new String(bs, StandardCharsets.UTF_8));
+    try (VLog vLog = vLogList.getVLog(info.getvLogName())) {
+      return vLog.getValue(info.getStartBinary(), info.getBinarySize());
     } catch (IOException e) {
       throw new HogletDBException(e);
     }
-    return map.put(ByteArrayUtils.bytesAsHexString(key), value);
   }
 
-  private byte[] removeKey(String collection, byte[] key) {
-    checkCollectionName(collection);
-    return map.remove(ByteArrayUtils.bytesAsHexString(key));
+  private byte[] putKey(String collection, byte[] key, byte[] value) throws HogletDBException {
+    try {
+      VLog vLog = vLogList.getNextAvailableVLog();
+      log.debug("putting into vlog file %s", vLog.getName());
+      VLogEntryInfo info = vLog.put(collection, key, 0, value, Operation.ADD);
+
+      return memoryTable.add(collection, key, info.asJson().getBytes(StandardCharsets.UTF_8));
+    } catch (IOException e) {
+      throw new HogletDBException(e);
+    }
+  }
+
+  private byte[] removeKey(String collection, byte[] key) throws HogletDBException {
+    byte[] bs = memoryTable.remove(collection, key);
+    if (bs == null) {
+      return null;
+    }
+    VLogEntryInfo info = VLogEntryInfo.fromJson(new String(bs, StandardCharsets.UTF_8));
+    try (VLog vLog = vLogList.getVLog(info.getvLogName())) {
+      return vLog.getValue(info.getStartBinary(), info.getBinarySize());
+    } catch (IOException e) {
+      throw new HogletDBException(e);
+    }
   }
 
   @Override

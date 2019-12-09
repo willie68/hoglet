@@ -58,7 +58,9 @@ public class VLog implements Closeable {
 
   @Override
   public void close() throws IOException {
-    writeLock.unlock();
+    if (writeLock.isLocked()) {
+      writeLock.unlock();
+    }
   }
 
   /**
@@ -82,6 +84,10 @@ public class VLog implements Closeable {
 
   public InputStream get(long startBinary, int binarySize) throws IOException {
     return vLogFile.get(startBinary, binarySize);
+  }
+
+  public byte[] getValue(long offset, int size) throws IOException {
+    return vLogFile.getValue(offset, size);
   }
 
   public boolean isAvailbleForWriting() {

@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
-import de.mcs.hoglet.ChunkEntry;
 import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.Options;
 import de.mcs.utils.caches.KeyAlreadyExistsException;
@@ -99,8 +98,7 @@ public class VLogList {
     return null;
   }
 
-  public VLog getVLog(ChunkEntry chunk) throws HogletDBException {
-    String containerName = chunk.getContainerName();
+  public VLog getVLog(String containerName) throws HogletDBException {
     VLog vLog = vLogMap.get(containerName);
     if (vLog == null) {
       vLog = readMap.getObjectFromExternalKey(containerName);
