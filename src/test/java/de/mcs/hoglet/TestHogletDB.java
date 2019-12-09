@@ -21,9 +21,7 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -194,6 +192,8 @@ public class TestHogletDB {
       for (int i = 0; i < 10; i++) {
         chunks.addChunk(i, value);
       }
+
+      System.out.println("wait");
     }
 
     try (InputStream input = hogletDB.getAsStream(collection, key)) {

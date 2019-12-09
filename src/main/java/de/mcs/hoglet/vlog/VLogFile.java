@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
@@ -160,7 +161,12 @@ public class VLogFile implements Closeable {
     vlogDescriptor.length = chunk.length;
     vlogDescriptor.operation = operation;
     // write the binary data
-    fileChannel.write(vlogDescriptor.getBytes());
+    ByteBuffer bytes = vlogDescriptor.getBytes();
+    ByteBuffer size = ByteBuffer.allocate(4);
+    size.putInt(bytes.limit());
+    size.flip();
+    fileChannel.write(size);
+    fileChannel.write(bytes);
     info.startBinary = fileChannel.position();
     fileChannel.write(ByteBuffer.wrap(chunk));
     info.end = fileChannel.position() - 1;
@@ -247,6 +253,9 @@ public class VLogFile implements Closeable {
         while (input.available() > 0) {
           markerFound = true;
           long start = position;
+          byte[] readNBytes = input.readNBytes(4);
+          position += 4;
+          int size = new BigInteger(readNBytes).intValue();
           byte[] next = input.readNBytes(4);
           if (next.length != 4) {
             markerFound = false;
@@ -256,8 +265,8 @@ public class VLogFile implements Closeable {
             markerFound = false;
           } else {
             long startDescription = position;
-            byte[] descriptorArray = input.readNBytes(VLogDescriptor.lengthWithoutStart());
-            if (descriptorArray.length != VLogDescriptor.lengthWithoutStart()) {
+            byte[] descriptorArray = input.readNBytes(VLogDescriptor.lengthWithoutStart(size));
+            if (descriptorArray.length != VLogDescriptor.lengthWithoutStart(size)) {
               throw new IOException("error reading description.");
             }
             position += descriptorArray.length;

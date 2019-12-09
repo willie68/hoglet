@@ -20,7 +20,6 @@ package de.mcs.hoglet.vlog;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 import de.mcs.hoglet.Operation;
 import de.mcs.utils.ByteArrayUtils;
@@ -72,9 +71,9 @@ public class VLogDescriptor {
     header.putInt(operation.ordinal());
     header.put(hash);
     header.put(DOC_LIMITER);
-    byte[] padding = new byte[header.remaining()];
-    Arrays.fill(padding, (byte) 0);
-    header.put(padding);
+    // byte[] padding = new byte[header.remaining()];
+    // Arrays.fill(padding, (byte) 0);
+    // header.put(padding);
     header.flip();
     return header;
   }
@@ -82,8 +81,8 @@ public class VLogDescriptor {
   public static VLogDescriptor fromBytes(byte[] byteArray) {
     ByteBuffer buffer = ByteBuffer.wrap(byteArray);
     VLogDescriptor vLogPostFix = new VLogDescriptor();
-    // don't read the doc seperator
-    buffer.get(new byte[4]);
+    // don't read size and the doc seperator
+    buffer.get(new byte[8]);
     int collectionLength = buffer.get();
     vLogPostFix.collectionBytes = new byte[collectionLength];
     buffer.get(vLogPostFix.collectionBytes);
@@ -138,12 +137,8 @@ public class VLogDescriptor {
     return vLogPostFix;
   }
 
-  public static int length() {
-    return HEADER_MAX_LENGTH;
-  }
-
-  public static int lengthWithoutStart() {
-    return length() - DOC_START.length;
+  public static int lengthWithoutStart(int length) {
+    return length - DOC_START.length;
   }
 
   /**

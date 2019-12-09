@@ -2,19 +2,24 @@ package de.mcs.hoglet;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 import de.mcs.hoglet.vlog.VLog;
+import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.hoglet.vlog.VLogList;
+import de.mcs.utils.GsonUtils;
 
 public class ChunkList implements Closeable {
 
   private String collection;
   private byte[] key;
   private List<ChunkEntry> chunks;
-  private HogletDB hogletDB;
+  private transient HogletDB hogletDB;
 
-  private ChunkList() {
+  public ChunkList() {
+    setChunks(new ArrayList<>());
   }
 
   public static ChunkList newChunkList() {
@@ -34,7 +39,8 @@ public class ChunkList implements Closeable {
   }
 
   /**
-   * @param key the key to set
+   * @param key
+   *          the key to set
    */
   public void setKey(byte[] key) {
     this.key = key;
@@ -48,7 +54,8 @@ public class ChunkList implements Closeable {
   }
 
   /**
-   * @param collection the collection to set
+   * @param collection
+   *          the collection to set
    */
   public void setCollection(String collection) {
     this.collection = collection;
@@ -65,18 +72,41 @@ public class ChunkList implements Closeable {
     }
     VLogList vLogList = hogletDB.getVLogList();
     try (VLog vlog = vLogList.getNextAvailableVLog()) {
-      vlog.put(getCollection(), key, chunkNumber, chunk, operation)
+      VLogEntryInfo info = vlog.put(getCollection(), key, chunkNumber, chunk, Operation.ADD);
+      ChunkEntry entry = new ChunkEntry().setChunkNumber(chunkNumber).setContainerName(vlog.getName())
+          .setHash(info.getHash()).setLength(info.getBinarySize()).setStart(info.getStart())
+          .setStartBinary(info.getStartBinary());
+      this.getChunks().add(entry);
     }
   }
 
+  /**
+   * closing this chunk, adding a new value to the vlog with all chuns as json, adding then the key/value to the lsm db.
+   */
   @Override
   public void close() throws IOException {
-    // TODO implement saving metadata
+    String json = GsonUtils.getJsonMapper().toJson(this);
+    hogletDB.put(key, json.getBytes(StandardCharsets.UTF_8));
   }
 
   public ChunkList withHogletDB(HogletDB hogletDB) {
     this.hogletDB = hogletDB;
     return this;
+  }
+
+  /**
+   * @return the chunks
+   */
+  public List<ChunkEntry> getChunks() {
+    return chunks;
+  }
+
+  /**
+   * @param chunks
+   *          the chunks to set
+   */
+  public void setChunks(List<ChunkEntry> chunks) {
+    this.chunks = chunks;
   }
 
 }

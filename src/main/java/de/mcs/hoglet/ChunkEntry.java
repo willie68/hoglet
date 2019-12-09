@@ -26,14 +26,12 @@ import de.mcs.utils.GsonUtils;
  */
 public class ChunkEntry {
 
-  private String key;
   private int chunkNumber;
   private String containerName;
   private long start;
   private long startBinary;
   private long length;
-  private String hash;
-  private String _type = this.getClass().getSimpleName();
+  private byte[] hash;
 
   /**
    * @return the chunkNumber
@@ -102,7 +100,7 @@ public class ChunkEntry {
   /**
    * @return the hash
    */
-  public String getHash() {
+  public byte[] getHash() {
     return hash;
   }
 
@@ -111,7 +109,7 @@ public class ChunkEntry {
    *          the hash to set
    * @return
    */
-  public ChunkEntry setHash(String hash) {
+  public ChunkEntry setHash(byte[] hash) {
     this.hash = hash;
     return this;
   }
@@ -142,32 +140,15 @@ public class ChunkEntry {
     return this;
   }
 
-  /**
-   * @return the key
-   */
-  public String getKey() {
-    return key;
-  }
-
-  /**
-   * @param key
-   *          the key to set
-   * @return
-   */
-  public ChunkEntry setKey(String key) {
-    this.key = key;
-    return this;
-  }
-
-  /**
-   * @return the _type
-   */
-  public String get_type() {
-    return _type;
-  }
-
-  public boolean isRightTyped() {
-    return this.getClass().getSimpleName().equals(_type);
-  }
+  // /**
+  // * @return the _type
+  // */
+  // public String get_type() {
+  // return _type;
+  // }
+  //
+  // public boolean isRightTyped() {
+  // return this.getClass().getSimpleName().equals(_type);
+  // }
 
 }
