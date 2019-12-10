@@ -54,6 +54,7 @@ public class HogletDB implements Closeable {
 
   private VLogList vLogList;
   private MemoryTable memoryTable;
+  private MemoryTable immutableTable;
   private boolean readonly;
   private FileChannel channel;
 
@@ -94,7 +95,12 @@ public class HogletDB implements Closeable {
     }
     vLogList = new VLogList(options);
     vLogList.setReadonly(readonly);
-    memoryTable = new SortedMemoryTable(options);
+    memoryTable = getNewMemoryTable();
+    immutableTable = null;
+  }
+
+  private SortedMemoryTable getNewMemoryTable() {
+    return new SortedMemoryTable(options);
   }
 
   /**
@@ -222,6 +228,7 @@ public class HogletDB implements Closeable {
     if (isReadonly()) {
       throw new HogletDBException("hoglet is in readonly mode");
     }
+    checkMemory();
     try {
       VLog vLog = vLogList.getNextAvailableVLog();
       log.debug("putting into vlog file %s", vLog.getName());
@@ -231,6 +238,22 @@ public class HogletDB implements Closeable {
     } catch (IOException e) {
       throw new HogletDBException(e);
     }
+  }
+
+  private void checkMemory() {
+    if (memoryTable.isAvailbleForWriting()) {
+      return;
+    }
+    while (immutableTable != null) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+    immutableTable = memoryTable;
+    memoryTable = getNewMemoryTable();
   }
 
   private byte[] removeKey(String collection, byte[] key) throws HogletDBException {
