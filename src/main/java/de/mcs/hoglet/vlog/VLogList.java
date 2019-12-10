@@ -39,6 +39,8 @@ public class VLogList {
   private ReentrantLock writeLock = new ReentrantLock();
   private ObjectCache<VLog> readMap;
 
+  private boolean readonly;
+
   public VLogList(Options options) {
     this.options = options;
     this.vLogMap = new HashMap<>();
@@ -55,7 +57,6 @@ public class VLogList {
           log.debug("remove %s from read cache", item.getName());
           item.closeFile();
         } catch (IOException e) {
-          // TODO Auto-generated catch block
           e.printStackTrace();
         }
       }
@@ -88,6 +89,9 @@ public class VLogList {
   }
 
   private VLog getAvailableVLogForWriting() {
+    if (readonly) {
+      return null;
+    }
     synchronized (vLogMap) {
       for (VLog vLog : vLogMap.values()) {
         if (vLog.isAvailbleForWriting()) {
@@ -150,6 +154,14 @@ public class VLogList {
         log.error(e);
       }
     }
+  }
+
+  public boolean isReadonly() {
+    return readonly;
+  }
+
+  public void setReadonly(boolean readonly) {
+    this.readonly = readonly;
   }
 
 }

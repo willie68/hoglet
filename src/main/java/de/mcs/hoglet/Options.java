@@ -32,9 +32,18 @@ public class Options {
    * @return option object with defaults
    */
   public static Options defaultOptions() {
-    return new Options().withVCntCompressAge(0).withVCntDeleteTreshHold(10).withVLogAge(1 * 60 * 60 * 1000)
-        .withVlogMaxChunkCount(10000).withVlogMaxSize(100 * 1024 * 1024).withVlogMaxFileCount(10)
-        .withChunkSize(1024 * 1024);
+    // @formatter:off
+    return new Options().withVCntCompressAge(0)
+        .withVCntDeleteTreshHold(10)
+        .withVLogAge(1 * 60 * 60 * 1000)
+        .withVlogMaxChunkCount(10000)
+        .withVlogMaxSize(100 * 1024 * 1024)
+        .withVlogMaxFileCount(10)
+        .withChunkSize(1024 * 1024)
+        .withMemTableMaxKeys(0)
+        .withMemTableMaxSize(64 * 1024 * 1024)
+        .withMemActiveBloomFilter(true);
+    // @formatter:on
   }
 
   /**
@@ -95,9 +104,24 @@ public class Options {
   long vlogMaxChunkCount;
 
   /**
-   * if the last write access is oldeer than that, the vLog file will be marked for compacting and as read only
+   * if the last write access is older than that, the vLog file will be marked for compacting and as read only
    */
   long vLogAge;
+
+  /**
+   * number of keys before a memory table will be closed for writing. 0 for unlimited keys.
+   */
+  int memTableMaxKeys;
+
+  /**
+   * value of estimation of the size of a memory table should not exceed. (max. 64MB)
+   */
+  int memTableMaxSize;
+
+  /**
+   * activate Bloomfilter on memory table
+   */
+  private boolean memActiveBloomFilter;
 
   /**
    * @return the vCntDeleteTreshHold
@@ -359,6 +383,81 @@ public class Options {
    */
   public Options withVCntMaxChunkCount(long vCntMaxChunkCount) {
     this.vCntMaxChunkCount = vCntMaxChunkCount;
+    return this;
+  }
+
+  /**
+   * @return the memTableMaxKeys
+   */
+  public int getMemTableMaxKeys() {
+    return memTableMaxKeys;
+  }
+
+  /**
+   * @param memTableMaxKeys
+   *          the memTableMaxKeys to set
+   */
+  public void setMemTableMaxKeys(int memTableMaxKeys) {
+    this.memTableMaxKeys = memTableMaxKeys;
+  }
+
+  /**
+   * @param memTableMaxKeys
+   *          the memTableMaxKeys to set
+   * @return
+   */
+  public Options withMemTableMaxKeys(int memTableMaxKeys) {
+    this.memTableMaxKeys = memTableMaxKeys;
+    return this;
+  }
+
+  /**
+   * @return the memTableMaxSize
+   */
+  public int getMemTableMaxSize() {
+    return memTableMaxSize;
+  }
+
+  /**
+   * @param memTableMaxSize
+   *          the memTableMaxSize to set
+   */
+  public void setMemTableMaxSize(int memTableMaxSize) {
+    this.memTableMaxSize = memTableMaxSize;
+  }
+
+  /**
+   * @param memTableMaxSize
+   *          the memTableMaxSize to set
+   * @return
+   */
+  public Options withMemTableMaxSize(int memTableMaxSize) {
+    this.memTableMaxSize = memTableMaxSize;
+    return this;
+  }
+
+  /**
+   * @return the memActiveBloomFilter
+   */
+  public boolean isMemActiveBloomFilter() {
+    return memActiveBloomFilter;
+  }
+
+  /**
+   * @param memActiveBloomFilter
+   *          the memActiveBloomFilter to set
+   */
+  public void setMemActiveBloomFilter(boolean memActiveBloomFilter) {
+    this.memActiveBloomFilter = memActiveBloomFilter;
+  }
+
+  /**
+   * @param memActiveBloomFilter
+   *          the memActiveBloomFilter to set
+   * @return
+   */
+  public Options withMemActiveBloomFilter(boolean memActiveBloomFilter) {
+    this.memActiveBloomFilter = memActiveBloomFilter;
     return this;
   }
 }

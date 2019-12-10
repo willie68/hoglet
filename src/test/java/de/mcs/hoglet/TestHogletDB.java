@@ -48,6 +48,7 @@ import de.mcs.utils.SystemHelper;
  */
 public class TestHogletDB {
 
+  private static final int MAX_CHUNKS = 10;
   private static final String DB_FOLDER_PATH = "e:/temp/hogletdb/";
   private static final String EASY_DB_FOLDER_PATH = "h:/temp/hogletdb/";
 
@@ -82,7 +83,7 @@ public class TestHogletDB {
   }
 
   @AfterEach
-  public void after() {
+  public void after() throws HogletDBException {
     if (hogletDB != null) {
       hogletDB.close();
     }
@@ -98,6 +99,8 @@ public class TestHogletDB {
 
   @Test
   public void testCRUD() throws HogletDBException {
+    assertFalse(hogletDB.isReadonly());
+
     byte[] key = UUID.randomUUID().toString().getBytes();
 
     byte[] value = new byte[1024];
@@ -131,6 +134,8 @@ public class TestHogletDB {
 
   @Test
   public void testCRUDWithCollection() throws HogletDBException {
+    assertFalse(hogletDB.isReadonly());
+
     String collection = "MCS";
     byte[] key = UUID.randomUUID().toString().getBytes();
 
@@ -165,6 +170,8 @@ public class TestHogletDB {
 
   @Test
   public void testNullValueInCollection() {
+    assertFalse(hogletDB.isReadonly());
+
     String collection = "MCS" + (char) 0 + "2";
     byte[] key = UUID.randomUUID().toString().getBytes();
 
@@ -191,14 +198,16 @@ public class TestHogletDB {
 
   @Test
   public void testChunkUpload() throws IOException {
-    String collection = "MCS0003";
-    byte[] key = UUID.randomUUID().toString().getBytes();
+    assertFalse(hogletDB.isReadonly());
+
+    final String collection = "MCS0003";
+    final byte[] key = UUID.randomUUID().toString().getBytes();
 
     byte[] value = new byte[1024 * 1024];
     new Random().nextBytes(value);
 
     try (ChunkList chunks = hogletDB.createChunk(collection, key)) {
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i < MAX_CHUNKS; i++) {
         Monitor m = MeasureFactory.start("writeChunk");
         try {
           chunks.addChunk(i, value);
@@ -209,10 +218,23 @@ public class TestHogletDB {
     }
 
     byte[] newValue = new byte[1024 * 1024];
+    int chunkCount = 0;
+    Monitor inputM = MeasureFactory.start("createInputStream");
     try (InputStream input = hogletDB.getAsStream(collection, key)) {
+      inputM.stop();
       assertNotNull(input);
-      int read = input.read(newValue);
-      assertTrue(Arrays.equals(value, newValue));
+      while (input.available() > 0) {
+        chunkCount++;
+        Monitor m = MeasureFactory.start("readChunk");
+        try {
+          int read = input.read(newValue);
+          assertEquals(newValue.length, read);
+          assertTrue(Arrays.equals(value, newValue));
+        } finally {
+          m.stop();
+        }
+      }
+      assertEquals(MAX_CHUNKS, chunkCount);
     }
   }
 }

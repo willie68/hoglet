@@ -22,14 +22,20 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 
 import org.apache.commons.lang3.StringUtils;
 
+import de.mcs.hoglet.memorytable.MemoryTable;
+import de.mcs.hoglet.memorytable.SortedMemoryTable;
 import de.mcs.hoglet.vlog.VLog;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.hoglet.vlog.VLogList;
+import de.mcs.utils.GsonUtils;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -37,6 +43,9 @@ import de.mcs.utils.logging.Logger;
  *
  */
 public class HogletDB implements Closeable {
+  public final static int KEY_LENGTH = 255;
+  public final static int COLLECTION_LENGTH = 255;
+
   private Logger log = Logger.getLogger(this.getClass());
   private static final String DEFAULT_COLLECTION = "default";
   private Options options;
@@ -44,7 +53,9 @@ public class HogletDB implements Closeable {
   private HashMap<String, byte[]> map;
 
   private VLogList vLogList;
-  private SortedMemoryTable memoryTable;
+  private MemoryTable memoryTable;
+  private boolean readonly;
+  private FileChannel channel;
 
   /**
    * create a new instance of the hoglet key value store with specifig options.
@@ -67,8 +78,22 @@ public class HogletDB implements Closeable {
     if (!dbFolder.exists()) {
       dbFolder.mkdirs();
     }
-    // TODO remove map implementation
+    File lockFile = new File(dbFolder, "LOCK");
+    if (!lockFile.exists()) {
+      try {
+        lockFile.createNewFile();
+      } catch (IOException e) {
+        throw new HogletDBException("can't lock folder.", e);
+      }
+    }
+    try {
+      channel = FileChannel.open(lockFile.toPath(), StandardOpenOption.WRITE, StandardOpenOption.CREATE);
+      FileLock writeLock = channel.tryLock();
+    } catch (IOException e) {
+      readonly = true;
+    }
     vLogList = new VLogList(options);
+    vLogList.setReadonly(readonly);
     memoryTable = new SortedMemoryTable(options);
   }
 
@@ -162,13 +187,17 @@ public class HogletDB implements Closeable {
   }
 
   /**
-   * starting a new chunked add
+   * starting a new chunked add.
    * 
    * @param collection
    * @param key
    * @return ChunkList
+   * @throws HogletDBException
    */
-  public ChunkList createChunk(String collection, byte[] key) {
+  public ChunkList createChunk(String collection, byte[] key) throws HogletDBException {
+    if (isReadonly()) {
+      throw new HogletDBException("hoglet is in readonly mode");
+    }
     return ChunkList.newChunkList().withCollection(collection).withKey(key).withHogletDB(this);
   }
 
@@ -190,6 +219,9 @@ public class HogletDB implements Closeable {
   }
 
   private byte[] putKey(String collection, byte[] key, byte[] value) throws HogletDBException {
+    if (isReadonly()) {
+      throw new HogletDBException("hoglet is in readonly mode");
+    }
     try {
       VLog vLog = vLogList.getNextAvailableVLog();
       log.debug("putting into vlog file %s", vLog.getName());
@@ -202,6 +234,9 @@ public class HogletDB implements Closeable {
   }
 
   private byte[] removeKey(String collection, byte[] key) throws HogletDBException {
+    if (isReadonly()) {
+      throw new HogletDBException("hoglet is in readonly mode");
+    }
     byte[] bs = memoryTable.remove(collection, key);
     if (bs == null) {
       return null;
@@ -215,16 +250,30 @@ public class HogletDB implements Closeable {
   }
 
   @Override
-  public void close() {
+  public void close() throws HogletDBException {
+    if (channel != null) {
+      try {
+        channel.close();
+      } catch (IOException e) {
+        throw new HogletDBException(e);
+      }
+    }
     vLogList.close();
   }
 
-  public InputStream getAsStream(String collection, byte[] key) {
-
-    return null;
+  public InputStream getAsStream(String collection, byte[] key) throws HogletDBException {
+    byte[] value = getKey(collection, key);
+    ChunkList chunkList = GsonUtils.getJsonMapper().fromJson(new String(value, StandardCharsets.UTF_8),
+        ChunkList.class);
+    ChunkedInputStream inputStream = new ChunkedInputStream(getVLogList(), chunkList.getChunks());
+    return inputStream;
   }
 
   public VLogList getVLogList() {
     return vLogList;
+  }
+
+  public boolean isReadonly() {
+    return readonly;
   }
 }

@@ -30,7 +30,7 @@ public class ChunkEntry {
   private String containerName;
   private long start;
   private long startBinary;
-  private long length;
+  private int length;
   private byte[] hash;
 
   /**
@@ -126,7 +126,7 @@ public class ChunkEntry {
   /**
    * @return the length
    */
-  public long getLength() {
+  public int getLength() {
     return length;
   }
 
@@ -135,7 +135,7 @@ public class ChunkEntry {
    *          the length to set
    * @return
    */
-  public ChunkEntry setLength(long length) {
+  public ChunkEntry setLength(int length) {
     this.length = length;
     return this;
   }

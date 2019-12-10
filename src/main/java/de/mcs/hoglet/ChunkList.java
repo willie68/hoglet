@@ -86,7 +86,7 @@ public class ChunkList implements Closeable {
   @Override
   public void close() throws IOException {
     String json = GsonUtils.getJsonMapper().toJson(this);
-    hogletDB.put(key, json.getBytes(StandardCharsets.UTF_8));
+    hogletDB.put(collection, key, json.getBytes(StandardCharsets.UTF_8));
   }
 
   public ChunkList withHogletDB(HogletDB hogletDB) {

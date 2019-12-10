@@ -24,7 +24,6 @@ import java.util.Comparator;
 import java.util.List;
 
 import de.mcs.hoglet.vlog.VLog;
-import de.mcs.hoglet.vlog.VLogFile;
 import de.mcs.hoglet.vlog.VLogList;
 
 /**
@@ -73,20 +72,30 @@ public class ChunkedInputStream extends InputStream {
   }
 
   private boolean openNextChunk() throws IOException {
-    chunkIndex++;
     if (chunkIndex >= chunks.size()) {
       return false;
     }
     ChunkEntry chunk = chunks.get(chunkIndex);
-    if (VLogFile.isVLog(chunk)) {
-      if (in != null) {
-        in.close();
-      }
-      VLog vlog = vLogList.getVLog(chunk);
-      in = vlog.get(chunk.getStartBinary(), chunk.getLength());
-      return true;
+    if (in != null) {
+      in.close();
     }
-    return false;
+    VLog vlog = vLogList.getVLog(chunk.getContainerName());
+    in = vlog.get(chunk.getStartBinary(), chunk.getLength());
+    chunkIndex++;
+    return true;
+  }
+
+  @Override
+  public int available() throws IOException {
+    if (in == null || in.available() == 0) {
+      if (!openNextChunk()) {
+        return 0;
+      }
+    }
+    if (in != null) {
+      return in.available();
+    }
+    return 0;
   }
 
   @Override
@@ -95,4 +104,5 @@ public class ChunkedInputStream extends InputStream {
       in.close();
     }
   }
+
 }
