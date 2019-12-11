@@ -21,10 +21,71 @@
  */
 package de.mcs.hoglet.memorytable;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.Map.Entry;
+
+import com.google.common.hash.BloomFilter;
+
+import de.mcs.hoglet.Options;
+
 /**
  * @author wklaa_000
  *
  */
-public class MemoryTableWriter {
+public class MemoryTableWriter implements Closeable {
+
+  private Options options;
+  private int level;
+  private int number;
+  private BloomFilter<MapKey> bloomfilter;
+
+  /**
+   * creating a new SS Table writer in the desired path.
+   * 
+   * @param options
+   *          the options for the writing
+   * @param level
+   * @param number
+   */
+  public MemoryTableWriter(Options options, int level, int number) {
+    this.options = options;
+    this.level = level;
+    this.number = number;
+    init();
+  }
+
+  private void init() {
+    MapKeyFunnel funnel = new MapKeyFunnel();
+    long keyCount = ((long) Math.pow(10, level)) * options.getMemTableMaxKeys();
+    bloomfilter = BloomFilter.create(funnel, keyCount, 0.01);
+  }
+
+  /**
+   * creating a new SST in the path with the given level and number
+   * 
+   * @param level
+   * @param number
+   */
+  private void createSSTable(int level, int number) {
+
+  }
+
+  /**
+   * writes a single key/value to the file and add the key to the bloomfilter for this file.
+   * 
+   * @param entry
+   *          the key/value to add
+   */
+  public void write(Entry<MapKey, byte[]> entry) {
+    bloomfilter.put(entry.getKey());
+  }
+
+  @Override
+  public void close() throws IOException {
+    // TODO close all desired files
+    // writing the bloomfilter and some statistics at the end of the file
+    // closing the file
+  }
 
 }

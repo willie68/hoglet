@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import de.mcs.utils.GsonUtils;
 
-class testGSON {
+class TestGSON {
 
   @BeforeEach
   void setUp() throws Exception {

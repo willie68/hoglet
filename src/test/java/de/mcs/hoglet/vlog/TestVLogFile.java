@@ -18,10 +18,7 @@
  */
 package de.mcs.hoglet.vlog;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -100,7 +97,7 @@ class TestVLogFile {
   @Test
   void testSingleBin() throws IOException, NoSuchAlgorithmException, InterruptedException {
     System.out.println("test single bin");
-    int fileIndex = 1;
+    int fileIndex = 11;
     deleteLogFile(fileIndex);
 
     try (VLogFile vLogFile = new VLogFile(options, fileIndex)) {
@@ -148,7 +145,7 @@ class TestVLogFile {
 
     Map<byte[], VLogEntryInfo> infos = new HashMap<>();
     VLogEntryInfo info = null;
-    try (VLogFile vLogFile = new VLogFile(options, 2)) {
+    try (VLogFile vLogFile = new VLogFile(options, 12)) {
       myVLogFile = vLogFile.getFile();
       byte[] buffer = new byte[1024 * 1024];
       new Random().nextBytes(buffer);
@@ -289,7 +286,7 @@ class TestVLogFile {
   @Test
   public void testVLogToBig() throws IOException, InterruptedException {
     System.out.println("testing max. vlog file length");
-    int fileIndex = 3;
+    int fileIndex = 13;
     deleteLogFile(fileIndex);
 
     List<byte[]> descs = new ArrayList<>();
@@ -335,7 +332,7 @@ class TestVLogFile {
   @Test
   public void testMaxChunksInVlog() throws IOException, InterruptedException {
     System.out.println("testing max. chunks in vlog file");
-    int fileIndex = 4;
+    int fileIndex = 14;
     deleteLogFile(fileIndex);
 
     List<byte[]> descs = new ArrayList<>();
@@ -382,7 +379,7 @@ class TestVLogFile {
   @Test
   public void testCollectionAndKeyLimits() throws IOException, InterruptedException {
     System.out.println("test testCollectionAndKeyLimits");
-    int fileIndex = 5;
+    int fileIndex = 15;
     deleteLogFile(fileIndex);
     try (VLogFile vLogFile = new VLogFile(options, fileIndex)) {
       assertTrue(vLogFile.isAvailbleForWriting());

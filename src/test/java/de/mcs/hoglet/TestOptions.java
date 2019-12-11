@@ -21,7 +21,7 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
@@ -33,10 +33,17 @@ class TestOptions {
 
   @Test
   void test() {
-    String yaml = Options.defaultOptions().toYamlString();
-    System.out.println(yaml);
-    Options fromYaml = Options.fromYamlString(yaml);
-    fail("Not yet implemented");
+    Options src = Options.defaultOptions().withPath("123456/123");
+    String yaml = src.toYamlString();
+    Options dest = Options.fromYamlString(yaml);
+    assertEquals(src.getChunkSize(), dest.getChunkSize());
+    assertEquals(src.getMemTableMaxKeys(), dest.getMemTableMaxKeys());
+    assertEquals(src.getMemTableMaxSize(), dest.getMemTableMaxSize());
+    assertEquals(src.getPath(), dest.getPath());
+    assertEquals(src.getVLogAge(), dest.getVLogAge());
+    assertEquals(src.getVlogMaxChunkCount(), dest.getVlogMaxChunkCount());
+    assertEquals(src.getVlogMaxFileCount(), dest.getVlogMaxFileCount());
+    assertEquals(src.getVlogMaxSize(), dest.getVlogMaxSize());
   }
 
 }

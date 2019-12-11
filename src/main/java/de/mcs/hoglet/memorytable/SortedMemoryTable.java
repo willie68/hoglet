@@ -4,14 +4,12 @@
 package de.mcs.hoglet.memorytable;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import com.google.common.hash.BloomFilter;
-import com.google.common.hash.Funnel;
-import com.google.common.hash.PrimitiveSink;
 
 import de.mcs.hoglet.Options;
 
@@ -19,36 +17,7 @@ import de.mcs.hoglet.Options;
  * @author w.klaas
  *
  */
-public class SortedMemoryTable implements MemoryTable {
-
-  static class MapKey implements Comparable<MapKey> {
-    private byte[] key;
-
-    @Override
-    public int hashCode() {
-      return Arrays.hashCode(key);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (!(obj instanceof MapKey)) {
-        return false;
-      }
-      MapKey src = (MapKey) obj;
-      return Arrays.equals(key, src.key);
-    }
-
-    @Override
-    public int compareTo(MapKey o) {
-      return Arrays.compare(key, o.key);
-    }
-  }
-
-  public static MapKey wrap(byte[] buffer) {
-    MapKey mapKey = new MapKey();
-    mapKey.key = Arrays.copyOf(buffer, buffer.length);
-    return mapKey;
-  }
+public class SortedMemoryTable implements MemoryTable, Iterable<Entry<MapKey, byte[]>> {
 
   private Options options;
   private Map<MapKey, byte[]> map;
@@ -58,20 +27,11 @@ public class SortedMemoryTable implements MemoryTable {
 
   public SortedMemoryTable(Options options) {
     this.options = options;
-    map = new TreeMap<MapKey, byte[]>();
-    map = new HashMap<MapKey, byte[]>(64 * 1024 * 1024);
+    map = new TreeMap<>();
+    // map = new HashMap<>(64 * 1024 * 1024);
 
-    Funnel<MapKey> funnel = new Funnel<>() {
-
-      private static final long serialVersionUID = 4637349648234815078L;
-
-      @Override
-      public void funnel(MapKey from, PrimitiveSink into) {
-        into.putBytes(from.key);
-      }
-
-    };
     if (options.isMemActiveBloomFilter()) {
+      MapKeyFunnel funnel = new MapKeyFunnel();
       bloomfilter = BloomFilter.create(funnel, 100000, 0.01);
     }
     missed = 0;
@@ -102,7 +62,7 @@ public class SortedMemoryTable implements MemoryTable {
       buffer[x] = key[i];
       x++;
     }
-    return wrap(buffer);
+    return MapKey.wrap(buffer);
   }
 
   private void checkCollectionName(String collection) {
@@ -149,7 +109,7 @@ public class SortedMemoryTable implements MemoryTable {
     if (bloomfilter != null) {
       bloomfilter.put(prefixedKey);
     }
-    memsize += prefixedKey.key.length + value.length + 40;
+    memsize += prefixedKey.getKey().length + value.length + 40;
     return map.put(prefixedKey, value);
   }
 
@@ -181,5 +141,10 @@ public class SortedMemoryTable implements MemoryTable {
       return false;
     }
     return true;
+  }
+
+  @Override
+  public Iterator<Entry<MapKey, byte[]>> iterator() {
+    return map.entrySet().iterator();
   }
 }

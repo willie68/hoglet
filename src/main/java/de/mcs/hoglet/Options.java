@@ -40,7 +40,7 @@ public class Options {
         .withVlogMaxSize(100 * 1024 * 1024)
         .withVlogMaxFileCount(10)
         .withChunkSize(1024 * 1024)
-        .withMemTableMaxKeys(0)
+        .withMemTableMaxKeys(100000)
         .withMemTableMaxSize(64 * 1024 * 1024)
         .withMemActiveBloomFilter(true);
     // @formatter:on
@@ -113,7 +113,7 @@ public class Options {
   long vLogAge;
 
   /**
-   * number of keys before a memory table will be closed for writing. 0 for unlimited keys.
+   * number of keys before a memory table will be closed for writing.
    */
   int memTableMaxKeys;
 
