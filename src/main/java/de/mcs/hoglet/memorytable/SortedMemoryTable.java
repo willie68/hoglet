@@ -14,7 +14,6 @@ import com.google.common.hash.Funnel;
 import com.google.common.hash.PrimitiveSink;
 
 import de.mcs.hoglet.Options;
-import de.mcs.utils.ByteArrayUtils;
 
 /**
  * @author w.klaas
@@ -104,10 +103,6 @@ public class SortedMemoryTable implements MemoryTable {
       x++;
     }
     return wrap(buffer);
-  }
-
-  private static String buildPrefixedKeyAsString(String collection, byte[] key) {
-    return ByteArrayUtils.bytesAsHexString(buildPrefixedKey(collection, key).key);
   }
 
   private void checkCollectionName(String collection) {

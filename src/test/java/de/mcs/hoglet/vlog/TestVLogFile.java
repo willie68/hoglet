@@ -49,13 +49,12 @@ import org.junit.jupiter.api.TestMethodOrder;
 import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
-import de.mcs.jmeasurement.JMConfig;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.ByteArrayUtils;
 import de.mcs.utils.Files;
 import de.mcs.utils.QueuedIDGenerator;
-import de.mcs.utils.SystemHelper;
+import de.mcs.utils.SystemTestFolderHelper;
 
 /**
  * @author w.klaas
@@ -66,10 +65,8 @@ class TestVLogFile {
 
   private static final int MAX_DOCS = 1000;
   private static final String FAMILY = "EASY";
-  private static final String BLOBSTORE_PATH = "e:/temp/blobstore/mydb";
-  private static final String EASY_BLOBSTORE_PATH = "h:/temp/blobstore/mydb";
-  private static final boolean DELETE_BEFORE_TEST = true;
   private static final String FAMILY_TOO_LONG = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456";
+  private static final boolean DELETE_BEFORE_TEST = true;
   private static File filePath;
   private static QueuedIDGenerator ids;
   private static Options options;
@@ -82,13 +79,12 @@ class TestVLogFile {
    */
   @BeforeAll
   public static void setUp() throws Exception {
-    MeasureFactory.setOption(JMConfig.OPTION_DISABLE_DEVIATION, "true");
+    SystemTestFolderHelper.initStatistics();
     ids = new QueuedIDGenerator(1000);
     Thread.sleep(1000);
 
-    if (DELETE_BEFORE_TEST) {
-      deleteFolder();
-    }
+    filePath = SystemTestFolderHelper.initFolder(DELETE_BEFORE_TEST);
+
     options = Options.defaultOptions().withPath(filePath.getAbsolutePath()).withVlogMaxChunkCount(10000)
         .withVlogMaxSize(2048L * 1024L * 1024L);
     myIds = new ArrayList<>();
@@ -98,18 +94,6 @@ class TestVLogFile {
   @AfterAll
   public static void afterAll() {
     System.out.println(MeasureFactory.asString());
-  }
-
-  private static void deleteFolder() throws IOException, InterruptedException {
-    filePath = new File(BLOBSTORE_PATH);
-    if ("CBP1ZF2".equals(SystemHelper.getComputerName())) {
-      filePath = new File(EASY_BLOBSTORE_PATH);
-    }
-    if (filePath.exists()) {
-      Files.remove(filePath, true);
-      Thread.sleep(100);
-    }
-    filePath.mkdirs();
   }
 
   @Order(1)
@@ -160,7 +144,6 @@ class TestVLogFile {
   @Test
   void test1000Bin() throws IOException, InterruptedException, NoSuchAlgorithmException {
     System.out.println("test 1000 bin");
-    deleteFolder();
     List<byte[]> descs = new ArrayList<>();
 
     Map<byte[], VLogEntryInfo> infos = new HashMap<>();

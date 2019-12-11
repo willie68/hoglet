@@ -46,6 +46,10 @@ public class Options {
     // @formatter:on
   }
 
+  public static Options fromYamlString(String yaml) {
+    return GsonUtils.getYamlMapper(Options.class).load(yaml);
+  }
+
   /**
    * path to the database folder
    */

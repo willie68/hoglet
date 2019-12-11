@@ -21,7 +21,11 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,8 +43,7 @@ import org.junit.jupiter.api.Test;
 
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
-import de.mcs.utils.Files;
-import de.mcs.utils.SystemHelper;
+import de.mcs.utils.SystemTestFolderHelper;
 
 /**
  * @author wklaa_000
@@ -49,32 +52,19 @@ import de.mcs.utils.SystemHelper;
 public class TestHogletDB {
 
   private static final int MAX_CHUNKS = 10;
-  private static final String DB_FOLDER_PATH = "e:/temp/hogletdb/";
-  private static final String EASY_DB_FOLDER_PATH = "h:/temp/hogletdb/";
 
   private HogletDB hogletDB;
   private static File dbFolder;
 
   @BeforeAll
   public static void beforeAll() throws IOException, InterruptedException {
-    deleteFolder();
+    SystemTestFolderHelper.initStatistics();
+    dbFolder = SystemTestFolderHelper.initFolder();
   }
 
   @AfterAll
   public static void afterAll() {
-    System.out.println(MeasureFactory.asString());
-  }
-
-  private static void deleteFolder() throws IOException, InterruptedException {
-    dbFolder = new File(DB_FOLDER_PATH);
-    if ("CBP1ZF2".equals(SystemHelper.getComputerName())) {
-      dbFolder = new File(EASY_DB_FOLDER_PATH);
-    }
-    if (dbFolder.exists()) {
-      Files.remove(dbFolder, true);
-      Thread.sleep(100);
-    }
-    dbFolder.mkdirs();
+    SystemTestFolderHelper.outputStatistics();
   }
 
   @BeforeEach

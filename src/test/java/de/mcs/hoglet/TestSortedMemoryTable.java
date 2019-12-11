@@ -3,7 +3,9 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,6 +23,7 @@ import de.mcs.jmeasurement.MeasurePoint;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.IDGenerator;
 import de.mcs.utils.QueuedIDGenerator;
+import de.mcs.utils.SystemTestFolderHelper;
 
 /**
  * @author w.klaas
@@ -38,6 +41,7 @@ class TestSortedMemoryTable {
    */
   @BeforeEach
   void setUp() throws Exception {
+    SystemTestFolderHelper.initStatistics();
     table = new SortedMemoryTable(Options.defaultOptions());
     ids = new QueuedIDGenerator(10000);
   }
@@ -51,7 +55,7 @@ class TestSortedMemoryTable {
 
   @AfterAll
   static void afterAll() {
-    System.out.println(MeasureFactory.asString());
+    SystemTestFolderHelper.outputStatistics();
   }
 
   @Test

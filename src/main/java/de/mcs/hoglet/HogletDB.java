@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
@@ -57,6 +58,7 @@ public class HogletDB implements Closeable {
   private MemoryTable immutableTable;
   private boolean readonly;
   private FileChannel channel;
+  private FileLock writeLock;
 
   /**
    * create a new instance of the hoglet key value store with specifig options.
@@ -89,7 +91,9 @@ public class HogletDB implements Closeable {
     }
     try {
       channel = FileChannel.open(lockFile.toPath(), StandardOpenOption.WRITE, StandardOpenOption.CREATE);
-      FileLock writeLock = channel.tryLock();
+      writeLock = channel.tryLock();
+    } catch (OverlappingFileLockException e) {
+      readonly = true;
     } catch (IOException e) {
       readonly = true;
     }
@@ -277,6 +281,15 @@ public class HogletDB implements Closeable {
     if (channel != null) {
       try {
         channel.close();
+      } catch (IOException e) {
+        throw new HogletDBException(e);
+      }
+    }
+    if (writeLock != null) {
+      try {
+        if (writeLock.isValid()) {
+          writeLock.close();
+        }
       } catch (IOException e) {
         throw new HogletDBException(e);
       }
