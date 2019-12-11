@@ -128,6 +128,11 @@ public class Options {
   private boolean memActiveBloomFilter;
 
   /**
+   * maximum number of files per level
+   */
+  private int lvlTableCount;
+
+  /**
    * @return the vCntDeleteTreshHold
    */
   public int getvCntDeleteTreshHold() {
@@ -462,6 +467,26 @@ public class Options {
    */
   public Options withMemActiveBloomFilter(boolean memActiveBloomFilter) {
     this.memActiveBloomFilter = memActiveBloomFilter;
+    return this;
+  }
+
+  public int getLvlTableCount() {
+    return lvlTableCount;
+  }
+
+  /**
+   * @param lvlTableCount the lvlTableCount to set
+   */
+  public void setLvlTableCount(int lvlTableCount) {
+    this.lvlTableCount = lvlTableCount;
+  }
+
+  /**
+   * @param lvlTableCount the lvlTableCount to set
+   * @return 
+   */
+  public Options withLvlTableCount(int lvlTableCount) {
+    this.lvlTableCount = lvlTableCount;
     return this;
   }
 }

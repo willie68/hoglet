@@ -1,7 +1,8 @@
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import de.mcs.hoglet.memorytable.MemoryTableWriter;
+import de.mcs.hoglet.memorytable.SSTException;
 import de.mcs.hoglet.memorytable.SortedMemoryTable;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
@@ -24,6 +26,8 @@ class TestMemoryTableWriter {
   private static final int MAX_KEYS = 500000;
   private SortedMemoryTable table;
   private IDGenerator ids;
+  private File dbFolder;
+  private Options options;
 
   /**
    * @throws java.lang.Exception
@@ -31,7 +35,9 @@ class TestMemoryTableWriter {
   @BeforeEach
   void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
-    table = new SortedMemoryTable(Options.defaultOptions());
+    dbFolder = SystemTestFolderHelper.initFolder(true);
+    options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath());
+    table = new SortedMemoryTable(options);
     ids = new QueuedIDGenerator(10000);
   }
 
@@ -48,7 +54,8 @@ class TestMemoryTableWriter {
   }
 
   @Test
-  void test() throws IOException {
+  void test() throws IOException, SSTException {
+    System.out.println("creating key/values");
     String collection = "Default";
     List<byte[]> keys = new ArrayList<>();
     for (int i = 0; i < MAX_KEYS; i++) {
@@ -59,22 +66,32 @@ class TestMemoryTableWriter {
       m.stop();
     }
 
+    System.out.println("checking key/values");
     for (byte[] key : keys) {
       Monitor m = MeasureFactory.start("SortedMemoryTable.contains");
       assertTrue(table.containsKey(collection, key));
       m.stop();
     }
 
+    System.out.println("start writing SST");
+
     int level = 1;
     int count = 1;
-    try (MemoryTableWriter writer = new MemoryTableWriter(Options.defaultOptions(), level, count)) {
+    try (MemoryTableWriter writer = new MemoryTableWriter(options, level, count)) {
 
       table.forEach(entry -> {
         Monitor m = MeasureFactory.start("MemoryTableWriter.write");
-        writer.write(entry);
+        try {
+          writer.write(entry);
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
         m.stop();
       });
     }
+
+    System.out.println("checking SST");
+
   }
 
 }
