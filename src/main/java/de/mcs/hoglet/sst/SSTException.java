@@ -1,4 +1,4 @@
-package de.mcs.hoglet.memorytable;
+package de.mcs.hoglet.sst;
 
 public class SSTException extends Exception {
 

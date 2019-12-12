@@ -1,7 +1,7 @@
 /**
  * 
  */
-package de.mcs.hoglet.memorytable;
+package de.mcs.hoglet.sst;
 
 import java.util.Iterator;
 import java.util.Map;

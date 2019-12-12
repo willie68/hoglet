@@ -19,7 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-package de.mcs.hoglet.memorytable;
+package de.mcs.hoglet.sst;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -35,7 +35,6 @@ import java.util.Map.Entry;
 import com.google.common.hash.BloomFilter;
 
 import de.mcs.hoglet.Options;
-import de.mcs.utils.ByteArrayUtils;
 import de.mcs.utils.GsonUtils;
 import de.mcs.utils.logging.Logger;
 
@@ -157,8 +156,6 @@ public class MemoryTableWriter implements Closeable {
     // writing the bloomfilter and some statistics at the end of the file
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     bloomfilter.writeTo(out);
-    String bloomString = ByteArrayUtils.bytesAsHexString(out.toByteArray());
-    log.debug("Bloomfilter: %s", bloomString);
     SSTStatus sstStatus = new SSTStatus().withBloomfilter(out.toByteArray()).withChunkCount(chunkCount)
         .withCreatedAt(new Date());
     String json = GsonUtils.getJsonMapper().toJson(sstStatus);

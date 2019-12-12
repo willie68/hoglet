@@ -31,8 +31,8 @@ import java.util.HashMap;
 
 import org.apache.commons.lang3.StringUtils;
 
-import de.mcs.hoglet.memorytable.MemoryTable;
-import de.mcs.hoglet.memorytable.SortedMemoryTable;
+import de.mcs.hoglet.sst.MemoryTable;
+import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.hoglet.vlog.VLog;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.hoglet.vlog.VLogList;

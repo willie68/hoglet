@@ -3,9 +3,7 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,7 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import de.mcs.hoglet.memorytable.SortedMemoryTable;
+import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.jmeasurement.DefaultMonitor;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.MeasurePoint;
@@ -123,20 +121,23 @@ class TestSortedMemoryTable {
   @Test
   void testMaxSize() {
     int maxTableSize = 1024 * 1024 * 10;
-    SortedMemoryTable myTable = new SortedMemoryTable(Options.defaultOptions().withMemTableMaxSize(maxTableSize));
+    SortedMemoryTable myTable = new SortedMemoryTable(
+        Options.defaultOptions().withMemTableMaxSize(maxTableSize).withMemTableMaxKeys(1000000));
     int countBytes = 0;
     String collection = "Default";
     List<byte[]> keys = new ArrayList<>();
     for (int i = 0; i < 1000000; i++) {
       byte[] bs = ids.getByteID();
+      // System.out.printf("%07d: %d %d\n", i, maxTableSize, countBytes);
       if (countBytes <= maxTableSize) {
-        assertTrue(myTable.isAvailbleForWriting());
+        assertTrue(myTable.isAvailbleForWriting(), String.format("error on %d", i));
         myTable.add(collection, bs, bs);
       } else {
         assertFalse(myTable.isAvailbleForWriting());
         break;
       }
-      countBytes += bs.length + collection.length() + 1 + 40 + bs.length;
+      // countBytes += prefixedKey.getKey().length + value.length + 40
+      countBytes += collection.length() + 1 + bs.length + 40 + bs.length;
     }
 
     byte[] key = ids.getByteID();

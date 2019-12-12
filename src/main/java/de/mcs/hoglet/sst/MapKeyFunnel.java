@@ -1,7 +1,7 @@
 /**
  * 
  */
-package de.mcs.hoglet.memorytable;
+package de.mcs.hoglet.sst;
 
 import com.google.common.hash.Funnel;
 import com.google.common.hash.PrimitiveSink;

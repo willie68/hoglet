@@ -16,11 +16,11 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import de.mcs.hoglet.memorytable.MapKey;
-import de.mcs.hoglet.memorytable.MemoryTableWriter;
-import de.mcs.hoglet.memorytable.SSTException;
-import de.mcs.hoglet.memorytable.SSTableReader;
-import de.mcs.hoglet.memorytable.SortedMemoryTable;
+import de.mcs.hoglet.sst.MapKey;
+import de.mcs.hoglet.sst.MemoryTableWriter;
+import de.mcs.hoglet.sst.SSTException;
+import de.mcs.hoglet.sst.SSTableReader;
+import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.IDGenerator;
@@ -161,9 +161,9 @@ class TestMemoryTableWriter {
     });
 
     try (MemoryTableWriter writer = new MemoryTableWriter(options, 1, 2)) {
-      Assertions.assertThrows(SSTException.class, () -> {
-        new MemoryTableWriter(options, 1, 2);
-      });
     }
+    Assertions.assertThrows(SSTException.class, () -> {
+      new MemoryTableWriter(options, 1, 2);
+    });
   }
 }
