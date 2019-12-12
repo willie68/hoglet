@@ -12,6 +12,7 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map.Entry;
 
 import com.google.common.hash.BloomFilter;
@@ -25,6 +26,7 @@ import de.mcs.utils.logging.Logger;
  *
  */
 public class SSTableReader implements Closeable {
+  private static final int CACHE_SIZE = 100;
   private Logger log = Logger.getLogger(this.getClass());
   private Options options;
   private int level;
@@ -35,11 +37,17 @@ public class SSTableReader implements Closeable {
   private File sstFile;
   private RandomAccessFile raf;
   private FileChannel fileChannel;
+  private long[] indexList;
+  private MapKey[] mapkeyList;
 
   public SSTableReader(Options options, int level, int number) throws SSTException, IOException {
     this.options = options;
     this.level = level;
     this.number = number;
+    this.indexList = new long[CACHE_SIZE];
+    this.mapkeyList = new MapKey[CACHE_SIZE];
+    Arrays.fill(this.indexList, 0);
+    this.chunkCount = 0;
     init();
   }
 
@@ -56,7 +64,6 @@ public class SSTableReader implements Closeable {
 
     openSSTable();
 
-    chunkCount = 0;
   }
 
   private void openSSTable() throws SSTException, IOException {
@@ -92,6 +99,42 @@ public class SSTableReader implements Closeable {
 
   public boolean mightContain(MapKey key) {
     return bloomfilter.mightContain(key);
+  }
+
+  public boolean contains(MapKey mapKey) throws IOException, SSTException {
+    if (mightContain(mapKey)) {
+      int count = 0;
+      long startPosition = 0;
+      for (int i = 0; i < indexList.length; i++) {
+        if (indexList[i] == 0) {
+          break;
+        }
+        if (mapKey.compareTo(mapkeyList[i]) >= 0) {
+          startPosition = indexList[i];
+        }
+      }
+
+      fileChannel.position(startPosition);
+      while (fileChannel.position() < fileChannel.size()) {
+        long savePosition = fileChannel.position();
+        Entry<MapKey, byte[]> entry = read();
+        int index = Math.round((count * CACHE_SIZE) / chunkCount);
+        if (indexList[index] == 0) {
+          indexList[index] = savePosition;
+          mapkeyList[index] = entry.getKey();
+        }
+        count++;
+        int compareTo = entry.getKey().compareTo(mapKey);
+        if (compareTo == 0) {
+          return true;
+        }
+        if (compareTo > 0) {
+          return false;
+        }
+      }
+    }
+    return false;
+
   }
 
   public Entry<MapKey, byte[]> read() throws IOException, SSTException {
@@ -136,10 +179,45 @@ public class SSTableReader implements Closeable {
     };
   }
 
+  public Entry<MapKey, byte[]> get(MapKey mapKey) throws IOException, SSTException {
+    if (mightContain(mapKey)) {
+      int count = 0;
+      long startPosition = 0;
+      for (int i = 0; i < indexList.length; i++) {
+        if (indexList[i] == 0) {
+          break;
+        }
+        if (mapKey.compareTo(mapkeyList[i]) >= 0) {
+          startPosition = indexList[i];
+        }
+      }
+
+      fileChannel.position(startPosition);
+      while (fileChannel.position() < fileChannel.size()) {
+        long savePosition = fileChannel.position();
+        Entry<MapKey, byte[]> entry = read();
+        int index = Math.round((count * CACHE_SIZE) / chunkCount);
+        if (indexList[index] == 0) {
+          indexList[index] = savePosition;
+          mapkeyList[index] = entry.getKey();
+        }
+        count++;
+        int compareTo = entry.getKey().compareTo(mapKey);
+        if (compareTo == 0) {
+          return entry;
+        }
+        if (compareTo > 0) {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
   @Override
   public void close() throws IOException {
-    // TODO Auto-generated method stub
-
+    fileChannel.close();
+    raf.close();
   }
 
 }

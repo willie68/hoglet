@@ -9,11 +9,13 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Random;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
 import de.mcs.hoglet.sst.MapKey;
@@ -30,16 +32,20 @@ import de.mcs.utils.SystemTestFolderHelper;
 class TestMemoryTableWriter {
 
   private static final int MAX_KEYS = 64000;
-  private SortedMemoryTable table;
-  private IDGenerator ids;
-  private File dbFolder;
-  private Options options;
+  private static SortedMemoryTable table;
+  private static IDGenerator ids;
+  private static File dbFolder;
+  private static Options options;
+  private static List<byte[]> keys;
+  private String collection = "Default";
+  int level = 1;
+  int count = 1;
 
   /**
    * @throws java.lang.Exception
    */
-  @BeforeEach
-  void setUp() throws Exception {
+  @BeforeAll
+  public static void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
     dbFolder = SystemTestFolderHelper.initFolder(true);
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(100000);
@@ -60,11 +66,12 @@ class TestMemoryTableWriter {
     System.out.println("finnished");
   }
 
+  @Order(1)
   @Test
   void test() throws IOException, SSTException {
     System.out.println("creating key/values");
-    String collection = "Default";
-    List<byte[]> keys = new ArrayList<>();
+
+    keys = new ArrayList<>();
     for (int i = 0; i < MAX_KEYS; i++) {
       byte[] key = ids.getByteID();
       keys.add(key);
@@ -83,8 +90,6 @@ class TestMemoryTableWriter {
 
     System.out.println("start writing SST");
 
-    int level = 1;
-    int count = 1;
     Monitor mOpen = MeasureFactory.start("MemoryTableWriter.open");
     try (MemoryTableWriter writer = new MemoryTableWriter(options, level, count)) {
       mOpen.stop();
@@ -101,7 +106,7 @@ class TestMemoryTableWriter {
       System.out.println("checking bloomfilter of writer.");
       for (byte[] cs : keys) {
         MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
-        Monitor m = MeasureFactory.start("SSTTableReader.mightContain");
+        Monitor m = MeasureFactory.start("MemoryTableWriter.mightContain");
         assertTrue(writer.mightContain(mapKey));
         m.stop();
       }
@@ -132,6 +137,44 @@ class TestMemoryTableWriter {
         assertArrayEquals(cs, entry.getValue());
       }
 
+    }
+  }
+
+  @Order(2)
+  @Test
+  void testAccess() throws IOException, SSTException {
+    System.out.println("SSTTableReader: check containing");
+    Random rnd = new Random(System.currentTimeMillis());
+    long countExisting = 0;
+    try (SSTableReader reader = new SSTableReader(options, level, count)) {
+      for (int i = 0; i < 1000; i++) {
+        boolean existing = rnd.nextBoolean();
+        if (existing) {
+          int index = rnd.nextInt(keys.size());
+          byte[] cs = keys.get(index);
+          MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
+
+          Monitor m = MeasureFactory.start("SSTTableReader.contain");
+          assertTrue(reader.mightContain(mapKey));
+          m.stop();
+
+          m = MeasureFactory.start("SSTTableReader.get");
+          Entry<MapKey, byte[]> entry = reader.get(mapKey);
+          m.stop();
+          assertNotNull(entry);
+
+          countExisting++;
+        } else {
+
+          MapKey mapKey = MapKey.buildPrefixedKey(collection, ids.getByteID());
+
+          Monitor m = MeasureFactory.start("SSTTableReader.notContain");
+          if (reader.mightContain(mapKey)) {
+            reader.contains(mapKey);
+          }
+          m.stop();
+        }
+      }
     }
   }
 
