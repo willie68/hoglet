@@ -36,7 +36,7 @@ class TestMemoryTableWriter {
   void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
     dbFolder = SystemTestFolderHelper.initFolder(true);
-    options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath());
+    options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(100000);
     table = new SortedMemoryTable(options);
     ids = new QueuedIDGenerator(10000);
   }

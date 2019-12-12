@@ -28,12 +28,15 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.Map.Entry;
 
 import com.google.common.hash.BloomFilter;
 
 import de.mcs.hoglet.Options;
 import de.mcs.utils.ByteArrayUtils;
+import de.mcs.utils.GsonUtils;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -102,6 +105,7 @@ public class MemoryTableWriter implements Closeable {
     }
 
     raf = new RandomAccessFile(sstFile, "rw");
+    raf.setLength(options.getVlogMaxSize());
     raf.seek(0);
     fileChannel = raf.getChannel();
   }
@@ -129,17 +133,31 @@ public class MemoryTableWriter implements Closeable {
     bb.flip();
 
     fileChannel.write(bb);
+    chunkCount++;
   }
 
   @Override
   public void close() throws IOException {
     // TODO close all desired files
+
+    long position = fileChannel.position();
+
     // writing the bloomfilter and some statistics at the end of the file
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     bloomfilter.writeTo(out);
     String bloomString = ByteArrayUtils.bytesAsHexString(out.toByteArray());
     log.debug("Bloomfilter: %s", bloomString);
+    SSTStatus sstStatus = new SSTStatus().withBloomfilter(out.toByteArray()).withChunkCount(chunkCount)
+        .withCreatedAt(new Date());
+    String json = GsonUtils.getJsonMapper().toJson(sstStatus);
+    fileChannel.write(StandardCharsets.UTF_8.encode(json));
+    ByteBuffer bb = ByteBuffer.allocate(128);
+    bb.putLong(position);
+    bb.flip();
+    fileChannel.write(bb);
     // closing the file
+    position = fileChannel.position();
+    raf.setLength(position);
     fileChannel.force(true);
     fileChannel.close();
     raf.close();
