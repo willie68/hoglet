@@ -45,6 +45,9 @@ import de.mcs.utils.logging.Logger;
  */
 public class MemoryTableWriter implements Closeable {
 
+  public static final byte[] ENTRY_START = "@".getBytes(StandardCharsets.UTF_8);
+  public static final byte[] ENTRY_SEPERATOR = "#".getBytes(StandardCharsets.UTF_8);
+
   private Logger log = Logger.getLogger(this.getClass());
   private Options options;
   private int level;
@@ -61,10 +64,13 @@ public class MemoryTableWriter implements Closeable {
    * 
    * @param options
    *          the options for the writing
-   * @param level the level of this sst file
-   * @param number the number of this sst file
-   * @throws SSTException  if something goes wrong
-   * @throws IOException 
+   * @param level
+   *          the level of this sst file
+   * @param number
+   *          the number of this sst file
+   * @throws SSTException
+   *           if something goes wrong
+   * @throws IOException
    */
   public MemoryTableWriter(Options options, int level, int number) throws SSTException, IOException {
     this.options = options;
@@ -74,10 +80,10 @@ public class MemoryTableWriter implements Closeable {
   }
 
   private void init() throws SSTException, IOException {
-    if (level <= 0) {
+    if (level < 0) {
       throw new SSTException("level should be greater than 0");
     }
-    if (number <= 0) {
+    if (number < 0) {
       throw new SSTException("number should be greater than 0");
     }
     MapKeyFunnel funnel = new MapKeyFunnel();
@@ -92,12 +98,12 @@ public class MemoryTableWriter implements Closeable {
   /**
    * creating a new SST in the path with the given level and number
    * 
-   * @throws SSTException 
-   * @throws IOException 
+   * @throws SSTException
+   * @throws IOException
    */
   private void createSSTable() throws SSTException, IOException {
-    filename = String.format("sst_%2d_%2d.sst", level, number);
-    log.debug("creating new vlog file: %s", filename);
+    filename = String.format("sst_%02d_%02d.sst", level, number);
+    log.debug("creating new sst file: %s", filename);
 
     sstFile = new File(options.getPath(), filename);
     if (sstFile.exists()) {
@@ -115,25 +121,31 @@ public class MemoryTableWriter implements Closeable {
    * 
    * @param entry
    *          the key/value to add
-   * @throws IOException 
+   * @throws IOException
    */
   public void write(Entry<MapKey, byte[]> entry) throws IOException {
     bloomfilter.put(entry.getKey());
     // format of entry is start byte '@', length of entry, key, seperator '#',
     // value
     // length of entry is key, seperator '#', value
-    int entryLength = entry.getKey().getKey().length + 1 + entry.getValue().length;
-    int bufLength = 1 + 8 + entryLength;
+    int entryLength = 4 + entry.getKey().getKey().length + 1 + 4 + entry.getValue().length;
+    int bufLength = 1 + 4 + entryLength;
     ByteBuffer bb = ByteBuffer.allocate(bufLength);
-    bb.putChar('@');
+    bb.put(ENTRY_START);
     bb.putInt(entryLength);
+    bb.putInt(entry.getKey().getKey().length);
     bb.put(entry.getKey().getKey());
-    bb.putChar('#');
+    bb.put(ENTRY_SEPERATOR);
+    bb.putInt(entry.getValue().length);
     bb.put(entry.getValue());
     bb.flip();
 
     fileChannel.write(bb);
     chunkCount++;
+  }
+
+  public boolean mightContain(MapKey key) {
+    return bloomfilter.mightContain(key);
   }
 
   @Override
