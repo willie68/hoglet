@@ -42,7 +42,8 @@ public class Options {
         .withChunkSize(1024 * 1024)
         .withMemTableMaxKeys(100000)
         .withMemTableMaxSize(64 * 1024 * 1024)
-        .withMemActiveBloomFilter(true);
+        .withMemActiveBloomFilter(true)
+        .withLvlTableCount(10);
     // @formatter:on
   }
 
@@ -475,15 +476,17 @@ public class Options {
   }
 
   /**
-   * @param lvlTableCount the lvlTableCount to set
+   * @param lvlTableCount
+   *          the lvlTableCount to set
    */
   public void setLvlTableCount(int lvlTableCount) {
     this.lvlTableCount = lvlTableCount;
   }
 
   /**
-   * @param lvlTableCount the lvlTableCount to set
-   * @return 
+   * @param lvlTableCount
+   *          the lvlTableCount to set
+   * @return
    */
   public Options withLvlTableCount(int lvlTableCount) {
     this.lvlTableCount = lvlTableCount;
