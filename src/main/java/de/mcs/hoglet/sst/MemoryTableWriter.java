@@ -35,6 +35,7 @@ import java.util.Map.Entry;
 import com.google.common.hash.BloomFilter;
 
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.utils.GsonUtils;
 import de.mcs.utils.logging.Logger;
 
@@ -53,7 +54,7 @@ public class MemoryTableWriter implements Closeable {
   private int number;
   private BloomFilter<MapKey> bloomfilter;
   private File sstFile;
-  private String filename;
+  // private String filename;
   private RandomAccessFile raf;
   private FileChannel fileChannel;
   private long chunkCount;
@@ -101,10 +102,8 @@ public class MemoryTableWriter implements Closeable {
    * @throws IOException
    */
   private void createSSTable() throws SSTException, IOException {
-    filename = String.format("sst_%02d_%02d.sst", level, number);
-    log.debug("creating new sst file: %s", filename);
-
-    sstFile = new File(options.getPath(), filename);
+    sstFile = DatabaseUtils.getSSTFilePath(new File(options.getPath()), level, number);
+    log.debug("creating new sst file: %s", sstFile.getName());
     if (sstFile.exists()) {
       throw new SSTException(String.format("sst file for level %d number %d already exists.", level, number));
     }

@@ -18,6 +18,8 @@ import java.util.Map.Entry;
 import com.google.common.hash.BloomFilter;
 
 import de.mcs.hoglet.Options;
+import de.mcs.jmeasurement.MeasureFactory;
+import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.GsonUtils;
 import de.mcs.utils.logging.Logger;
 
@@ -183,6 +185,7 @@ public class SSTableReader implements Closeable {
     if (mightContain(mapKey)) {
       int count = 0;
       long startPosition = 0;
+      Monitor m = MeasureFactory.start("SSTableReader#get.lookup");
       for (int i = 0; i < indexList.length; i++) {
         if (indexList[i] == 0) {
           break;
@@ -191,24 +194,36 @@ public class SSTableReader implements Closeable {
           startPosition = indexList[i];
         }
       }
-
+      m.stop();
+      if (startPosition > 0) {
+        m = MeasureFactory.start(String.format("SSTableReader#get.positionCount_%02d", startPosition));
+        m.stop();
+      }
+      m = MeasureFactory.start("SSTableReader#get.position");
       fileChannel.position(startPosition);
-      while (fileChannel.position() < fileChannel.size()) {
-        long savePosition = fileChannel.position();
-        Entry<MapKey, byte[]> entry = read();
-        int index = Math.round((count * CACHE_SIZE) / chunkCount);
-        if (indexList[index] == 0) {
-          indexList[index] = savePosition;
-          mapkeyList[index] = entry.getKey();
+      m.stop();
+
+      m = MeasureFactory.start("SSTableReader#get.scan");
+      try {
+        while (fileChannel.position() < fileChannel.size()) {
+          long savePosition = fileChannel.position();
+          Entry<MapKey, byte[]> entry = read();
+          int index = Math.round((count * CACHE_SIZE) / chunkCount);
+          if (indexList[index] == 0) {
+            indexList[index] = savePosition;
+            mapkeyList[index] = entry.getKey();
+          }
+          count++;
+          int compareTo = entry.getKey().compareTo(mapKey);
+          if (compareTo == 0) {
+            return entry;
+          }
+          if (compareTo > 0) {
+            return null;
+          }
         }
-        count++;
-        int compareTo = entry.getKey().compareTo(mapKey);
-        if (compareTo == 0) {
-          return entry;
-        }
-        if (compareTo > 0) {
-          return null;
-        }
+      } finally {
+        m.stop();
       }
     }
     return null;

@@ -23,6 +23,7 @@ public class SSTCompacter {
   private int readingLevel;
   private int writingNumber;
   private Logger log = Logger.getLogger(this.getClass());
+  private boolean deleteSource;
 
   public SSTCompacter(Options options) {
     this.options = options;
@@ -54,5 +55,7 @@ public class SSTCompacter {
     } catch (Exception e) {
       log.error(e);
     }
+
   }
+
 }

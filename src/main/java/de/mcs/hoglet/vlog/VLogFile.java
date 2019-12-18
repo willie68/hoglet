@@ -25,7 +25,6 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -37,8 +36,8 @@ import org.apache.commons.io.input.BoundedInputStream;
 import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.utils.ByteArrayUtils;
-import de.mcs.utils.HashUtils.Algorithm;
 import de.mcs.utils.io.RandomAccessInputStream;
 import de.mcs.utils.logging.Logger;
 
@@ -51,25 +50,20 @@ import de.mcs.utils.logging.Logger;
  */
 public class VLogFile implements Closeable {
 
-  private static final long MAX_VLOG_SIZE = (1024L * 1024L * 1024L * 2L) - 1L;
   private Logger log = Logger.getLogger(this.getClass());
-  private String internalName;
   private File vLogFile;
   private FileChannel fileChannel;
   private RandomAccessFile raf;
   private Options options;
   private int chunkCount;
   private boolean readOnly;
-  private MessageDigest messageDigest;
 
   public static File getFilePathName(File path, int number) {
-    String internalName = String.format("vlog_%04d.vlog", number);
-    return new File(path, internalName);
+    return DatabaseUtils.getVLogFilePath(path, number);
   }
 
   private VLogFile() {
     chunkCount = -1;
-    messageDigest = Algorithm.SHA_256.getMessageDigest();
   }
 
   public VLogFile(Options options, int number) throws IOException {
@@ -87,7 +81,6 @@ public class VLogFile implements Closeable {
   }
 
   private void init() throws IOException {
-    internalName = vLogFile.getName();
     if (vLogFile.exists()) {
       loadLogFile();
     } else {
@@ -96,7 +89,7 @@ public class VLogFile implements Closeable {
   }
 
   private void loadLogFile() throws IOException {
-    log.debug("loading vlog file: %s", internalName);
+    log.debug("loading vlog file: %s", vLogFile.getName());
     raf = new RandomAccessFile(vLogFile, "r");
     raf.seek(raf.length());
     fileChannel = raf.getChannel();
@@ -105,7 +98,7 @@ public class VLogFile implements Closeable {
   }
 
   private void initLogFile() throws IOException {
-    log.debug("creating new vlog file: %s", internalName);
+    log.debug("creating new vlog file: %s", vLogFile.getName());
     raf = new RandomAccessFile(vLogFile, "rw");
     raf.setLength(options.getVlogMaxSize());
     raf.seek(0);
@@ -115,7 +108,7 @@ public class VLogFile implements Closeable {
   }
 
   public String getName() {
-    return internalName;
+    return vLogFile.getName();
   }
 
   @Override
@@ -141,7 +134,7 @@ public class VLogFile implements Closeable {
       throw new HogletDBException("Illegal key length.");
     }
     if (!isAvailbleForWriting()) {
-      throw new HogletDBException(String.format("VLogfile %s is not available for writing.", internalName));
+      throw new HogletDBException(String.format("VLogfile %s is not available for writing.", vLogFile.getName()));
     }
     byte[] digest = new byte[2];
     // calculating hash of chunk

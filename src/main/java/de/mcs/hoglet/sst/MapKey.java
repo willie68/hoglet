@@ -69,4 +69,22 @@ public class MapKey implements Comparable<MapKey> {
   public int compareTo(MapKey o) {
     return Arrays.compare(key, o.key);
   }
+
+  public String getCollection() {
+    for (int i = 0; i < key.length; i++) {
+      if (key[i] == 0) {
+        return new String(Arrays.copyOf(key, i));
+      }
+    }
+    return null;
+  }
+
+  public byte[] getKeyBytes() {
+    for (int i = 0; i < key.length; i++) {
+      if (key[i] == 0) {
+        return Arrays.copyOfRange(key, i + 1, key.length);
+      }
+    }
+    return null;
+  }
 }

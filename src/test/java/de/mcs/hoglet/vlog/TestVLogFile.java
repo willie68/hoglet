@@ -18,7 +18,10 @@
  */
 package de.mcs.hoglet.vlog;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -166,9 +169,17 @@ class TestVLogFile {
         }
         infos.put(id, info);
       }
+      System.out.println();
+      System.out.println("checking");
+      int i = 0;
       for (byte[] id : descs) {
-
-        // System.out.println(infos.get(id).toString());
+        i++;
+        if ((i % 100) == 0) {
+          System.out.print(".");
+        }
+        if ((i % 10000) == 0) {
+          System.out.println(" " + i);
+        }
 
         testFileBin(vLogFile, buffer, id, infos.get(id));
       }

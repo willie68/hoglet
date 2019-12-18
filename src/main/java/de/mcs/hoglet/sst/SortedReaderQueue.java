@@ -64,6 +64,7 @@ public class SortedReaderQueue implements AutoCloseable {
   private Options options;
   private List<QueuedReader> readerList;
   private Logger log = Logger.getLogger(this.getClass());
+  private boolean deleteSource;
 
   public SortedReaderQueue(Options options) {
     this.readerList = new ArrayList<>();
