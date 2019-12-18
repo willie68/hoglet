@@ -54,7 +54,6 @@ public class MemoryTableWriter implements Closeable {
   private int number;
   private BloomFilter<MapKey> bloomfilter;
   private File sstFile;
-  // private String filename;
   private RandomAccessFile raf;
   private FileChannel fileChannel;
   private long chunkCount;
@@ -146,10 +145,11 @@ public class MemoryTableWriter implements Closeable {
     return bloomfilter.mightContain(key);
   }
 
+  /**
+   * writing the sst information structure and than closing the file,
+   */
   @Override
   public void close() throws IOException {
-    // TODO close all desired files
-
     long position = fileChannel.position();
 
     // writing the bloomfilter and some statistics at the end of the file

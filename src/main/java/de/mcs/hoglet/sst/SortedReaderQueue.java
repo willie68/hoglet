@@ -5,6 +5,7 @@ package de.mcs.hoglet.sst;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -23,12 +24,16 @@ public class SortedReaderQueue implements AutoCloseable {
 
   private class QueuedReader implements AutoCloseable {
 
-    private Entry<MapKey, byte[]> nextEntry;
+    private Entry<MapKey, byte[]> nextEntry = null;
     private SSTableReader reader;
+    private Iterator<Entry<MapKey, byte[]>> entries;
 
     public QueuedReader(SSTableReader reader) throws IOException, SSTException {
       this.reader = reader;
-      nextEntry = reader.read();
+      entries = reader.entries();
+      if (entries.hasNext()) {
+        nextEntry = entries.next();
+      }
     }
 
     public boolean isAvailble() {
@@ -47,9 +52,9 @@ public class SortedReaderQueue implements AutoCloseable {
         return null;
       }
       Entry<MapKey, byte[]> saveEntry = nextEntry;
-      try {
-        nextEntry = reader.read();
-      } catch (Exception e) {
+      if (entries.hasNext()) {
+        nextEntry = entries.next();
+      } else {
         nextEntry = null;
       }
       return saveEntry;
@@ -94,7 +99,7 @@ public class SortedReaderQueue implements AutoCloseable {
     boolean found = true;
     while (found) {
       try {
-        SSTableReader reader = new SSTableReader(options, readingLevel, number);
+        SSTableReader reader = new SSTableReaderMMF(options, readingLevel, number);
         readerList.add(new QueuedReader(reader));
         number++;
       } catch (SSTException e) {

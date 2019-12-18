@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import de.mcs.hoglet.sst.MapKey;
 import de.mcs.hoglet.sst.MemoryTableWriter;
 import de.mcs.hoglet.sst.SSTException;
-import de.mcs.hoglet.sst.SSTableReaderRAF;
+import de.mcs.hoglet.sst.SSTableReaderMMF;
 import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
@@ -29,7 +29,7 @@ import de.mcs.utils.IDGenerator;
 import de.mcs.utils.QueuedIDGenerator;
 import de.mcs.utils.SystemTestFolderHelper;
 
-class TestMemoryTableWriter {
+class TestSSTableReaderMMF {
 
   private static final int MAX_KEYS = 64000;
   private static SortedMemoryTable table;
@@ -75,41 +75,24 @@ class TestMemoryTableWriter {
     for (int i = 0; i < MAX_KEYS; i++) {
       byte[] key = ids.getByteID();
       keys.add(key);
-
-      Monitor m = MeasureFactory.start("SortedMemoryTable.add");
       table.add(collection, key, key);
-      m.stop();
     }
 
     System.out.println("checking key/values");
     for (byte[] key : keys) {
-      Monitor m = MeasureFactory.start("SortedMemoryTable.contains");
       assertTrue(table.containsKey(collection, key));
-      m.stop();
     }
 
     System.out.println("start writing SST");
-
-    Monitor mOpen = MeasureFactory.start("MemoryTableWriter.open");
     try (MemoryTableWriter writer = new MemoryTableWriter(options, level, count)) {
-      mOpen.stop();
-
       table.forEach(entry -> {
-        Monitor m = MeasureFactory.start("MemoryTableWriter.write");
         try {
           writer.write(entry);
         } catch (IOException e) {
           e.printStackTrace();
         }
-        m.stop();
       });
       System.out.println("checking bloomfilter of writer.");
-      for (byte[] cs : keys) {
-        MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
-        Monitor m = MeasureFactory.start("MemoryTableWriter.mightContain");
-        assertTrue(writer.mightContain(mapKey));
-        m.stop();
-      }
     }
 
     System.out.println("checking SST");
@@ -121,8 +104,8 @@ class TestMemoryTableWriter {
       }
     });
 
-    mOpen = MeasureFactory.start("SSTTableReader.open");
-    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, count)) {
+    Monitor mOpen = MeasureFactory.start("SSTTableReader.open");
+    try (SSTableReaderMMF reader = new SSTableReaderMMF(options, level, count)) {
       mOpen.stop();
       for (byte[] cs : keys) {
         MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
@@ -130,7 +113,6 @@ class TestMemoryTableWriter {
         assertTrue(reader.mightContain(mapKey));
         m.stop();
       }
-
     }
   }
 
@@ -140,7 +122,7 @@ class TestMemoryTableWriter {
     System.out.println("SSTTableReader: check containing");
     Random rnd = new Random(System.currentTimeMillis());
     long countExisting = 0;
-    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, count)) {
+    try (SSTableReaderMMF reader = new SSTableReaderMMF(options, level, count)) {
       for (int i = 0; i < 1000; i++) {
         boolean existing = rnd.nextBoolean();
         if (existing) {
@@ -175,32 +157,18 @@ class TestMemoryTableWriter {
   @Test
   public void testLevelNumber() {
     Assertions.assertThrows(SSTException.class, () -> {
-      new MemoryTableWriter(options, -1, 0);
+      new SSTableReaderMMF(options, -1, 0);
     });
 
     Assertions.assertThrows(SSTException.class, () -> {
-      new MemoryTableWriter(options, 0, -1);
-    });
-
-    Assertions.assertThrows(SSTException.class, () -> {
-      new SSTableReaderRAF(options, -1, 0);
-    });
-
-    Assertions.assertThrows(SSTException.class, () -> {
-      new SSTableReaderRAF(options, 0, -1);
+      new SSTableReaderMMF(options, 0, -1);
     });
   }
 
   @Test
   public void testFileCreation() throws IOException, SSTException {
     Assertions.assertThrows(SSTException.class, () -> {
-      new SSTableReaderRAF(options, 2, 2);
-    });
-
-    try (MemoryTableWriter writer = new MemoryTableWriter(options, 1, 2)) {
-    }
-    Assertions.assertThrows(SSTException.class, () -> {
-      new MemoryTableWriter(options, 1, 2);
+      new SSTableReaderMMF(options, 2, 2);
     });
   }
 }

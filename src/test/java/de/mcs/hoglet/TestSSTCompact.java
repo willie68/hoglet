@@ -24,6 +24,7 @@ import de.mcs.hoglet.sst.MapKey;
 import de.mcs.hoglet.sst.MemoryTableWriter;
 import de.mcs.hoglet.sst.SSTCompacter;
 import de.mcs.hoglet.sst.SSTableReader;
+import de.mcs.hoglet.sst.SSTableReaderMMF;
 import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.jmeasurement.MeasureFactory;
@@ -117,7 +118,7 @@ class TestSSTCompact {
     assertEquals(1, dbUtils.getSSTFileCount(2));
 
     System.out.println("start reading");
-    try (SSTableReader reader = new SSTableReader(options, 2, 1)) {
+    try (SSTableReader reader = new SSTableReaderMMF(options, 2, 1)) {
       for (byte[] bs : saveKeys) {
         MapKey key = MapKey.buildPrefixedKey(collection, bs);
         assertTrue(reader.mightContain(key));

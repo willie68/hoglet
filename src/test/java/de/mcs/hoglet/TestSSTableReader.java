@@ -29,7 +29,7 @@ import de.mcs.utils.IDGenerator;
 import de.mcs.utils.QueuedIDGenerator;
 import de.mcs.utils.SystemTestFolderHelper;
 
-class TestMemoryTableWriter {
+class TestSSTableReader {
 
   private static final int MAX_KEYS = 64000;
   private static SortedMemoryTable table;
@@ -75,41 +75,24 @@ class TestMemoryTableWriter {
     for (int i = 0; i < MAX_KEYS; i++) {
       byte[] key = ids.getByteID();
       keys.add(key);
-
-      Monitor m = MeasureFactory.start("SortedMemoryTable.add");
       table.add(collection, key, key);
-      m.stop();
     }
 
     System.out.println("checking key/values");
     for (byte[] key : keys) {
-      Monitor m = MeasureFactory.start("SortedMemoryTable.contains");
       assertTrue(table.containsKey(collection, key));
-      m.stop();
     }
 
     System.out.println("start writing SST");
-
-    Monitor mOpen = MeasureFactory.start("MemoryTableWriter.open");
     try (MemoryTableWriter writer = new MemoryTableWriter(options, level, count)) {
-      mOpen.stop();
-
       table.forEach(entry -> {
-        Monitor m = MeasureFactory.start("MemoryTableWriter.write");
         try {
           writer.write(entry);
         } catch (IOException e) {
           e.printStackTrace();
         }
-        m.stop();
       });
       System.out.println("checking bloomfilter of writer.");
-      for (byte[] cs : keys) {
-        MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
-        Monitor m = MeasureFactory.start("MemoryTableWriter.mightContain");
-        assertTrue(writer.mightContain(mapKey));
-        m.stop();
-      }
     }
 
     System.out.println("checking SST");
@@ -121,7 +104,7 @@ class TestMemoryTableWriter {
       }
     });
 
-    mOpen = MeasureFactory.start("SSTTableReader.open");
+    Monitor mOpen = MeasureFactory.start("SSTTableReader.open");
     try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, count)) {
       mOpen.stop();
       for (byte[] cs : keys) {
@@ -129,6 +112,11 @@ class TestMemoryTableWriter {
         Monitor m = MeasureFactory.start("SSTTableReader.mightContain");
         assertTrue(reader.mightContain(mapKey));
         m.stop();
+        // m = MeasureFactory.start("SSTTableReader.read");
+        // Entry<MapKey, byte[]> entry = reader.read();
+        // m.stop();
+        // assertArrayEquals(mapKey.getKey(), entry.getKey().getKey());
+        // assertArrayEquals(cs, entry.getValue());
       }
 
     }
@@ -175,14 +163,6 @@ class TestMemoryTableWriter {
   @Test
   public void testLevelNumber() {
     Assertions.assertThrows(SSTException.class, () -> {
-      new MemoryTableWriter(options, -1, 0);
-    });
-
-    Assertions.assertThrows(SSTException.class, () -> {
-      new MemoryTableWriter(options, 0, -1);
-    });
-
-    Assertions.assertThrows(SSTException.class, () -> {
       new SSTableReaderRAF(options, -1, 0);
     });
 
@@ -195,12 +175,6 @@ class TestMemoryTableWriter {
   public void testFileCreation() throws IOException, SSTException {
     Assertions.assertThrows(SSTException.class, () -> {
       new SSTableReaderRAF(options, 2, 2);
-    });
-
-    try (MemoryTableWriter writer = new MemoryTableWriter(options, 1, 2)) {
-    }
-    Assertions.assertThrows(SSTException.class, () -> {
-      new MemoryTableWriter(options, 1, 2);
     });
   }
 }
