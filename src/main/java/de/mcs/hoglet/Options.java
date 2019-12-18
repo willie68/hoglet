@@ -25,6 +25,12 @@ import de.mcs.utils.GsonUtils;
  *
  */
 public class Options {
+  public enum SSTReadStrategy {
+    /** Strategy random access files */
+    RAF,
+    /** Strategy memory mapped files */
+    MMF
+  }
 
   /**
    * create a new option object with defaults
@@ -43,7 +49,8 @@ public class Options {
         .withMemTableMaxKeys(100000)
         .withMemTableMaxSize(64 * 1024 * 1024)
         .withMemActiveBloomFilter(true)
-        .withLvlTableCount(10);
+        .withLvlTableCount(10)
+        .withSSTReadStrategy(SSTReadStrategy.MMF);
     // @formatter:on
   }
 
@@ -132,6 +139,8 @@ public class Options {
    * maximum number of files per level
    */
   private int lvlTableCount;
+
+  private SSTReadStrategy sstReadStrategy;
 
   /**
    * @return the vCntDeleteTreshHold
@@ -492,4 +501,25 @@ public class Options {
     this.lvlTableCount = lvlTableCount;
     return this;
   }
+
+  public Options withSSTReadStrategy(SSTReadStrategy strategy) {
+    setSstReadStrategy(strategy);
+    return this;
+  }
+
+  /**
+   * @return the sstReadStrategy
+   */
+  public SSTReadStrategy getSstReadStrategy() {
+    return sstReadStrategy;
+  }
+
+  /**
+   * @param sstReadStrategy
+   *          the sstReadStrategy to set
+   */
+  public void setSstReadStrategy(SSTReadStrategy sstReadStrategy) {
+    this.sstReadStrategy = sstReadStrategy;
+  }
+
 }

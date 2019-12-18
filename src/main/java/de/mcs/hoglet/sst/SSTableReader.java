@@ -6,7 +6,6 @@ package de.mcs.hoglet.sst;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.Map.Entry;
 
 /**
  * @author w.klaas
@@ -46,7 +45,7 @@ public interface SSTableReader extends Closeable {
    * @throws IOException
    * @throws SSTException
    */
-  Entry<MapKey, byte[]> get(MapKey key) throws IOException, SSTException;
+  Entry get(MapKey key) throws IOException, SSTException;
 
   /**
    * starting a iterator, going thru all entries of this file.
@@ -55,6 +54,6 @@ public interface SSTableReader extends Closeable {
    * @throws IOException
    * @throws SSTException
    */
-  Iterator<Entry<MapKey, byte[]>> entries() throws IOException, SSTException;
+  Iterator<Entry> entries() throws IOException, SSTException;
 
 }

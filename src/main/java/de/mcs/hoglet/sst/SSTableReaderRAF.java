@@ -14,7 +14,6 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.hash.BloomFilter;
@@ -33,11 +32,11 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
 
   private class PositionEntry {
     long position;
-    Entry<MapKey, byte[]> entry;
+    Entry entry;
     long nextPosition;
   }
 
-  public class SSTableRAFIterator implements Iterator<Entry<MapKey, byte[]>> {
+  public class SSTableRAFIterator implements Iterator<Entry> {
     private SSTableReaderRAF reader;
     private PositionEntry next;
 
@@ -52,7 +51,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     }
 
     @Override
-    public Entry<MapKey, byte[]> next() {
+    public Entry next() {
       PositionEntry actual = next;
       try {
         next = reader.read(next.nextPosition);
@@ -160,7 +159,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
         fileChannel.position(startPosition);
         while (fileChannel.position() < fileChannel.size()) {
           long savePosition = fileChannel.position();
-          Entry<MapKey, byte[]> entry = read();
+          Entry entry = read();
           int index = Math.round((count * CACHE_SIZE) / chunkCount);
           if (indexList[index] == 0) {
             indexList[index] = savePosition;
@@ -197,7 +196,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     }
   }
 
-  private Entry<MapKey, byte[]> read() throws IOException, SSTException {
+  private Entry read() throws IOException, SSTException {
     byte entryStart = raf.readByte();
     if (MemoryTableWriter.ENTRY_START[0] != entryStart) {
       throw new SSTException("error on sst file");
@@ -220,27 +219,11 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     byte[] valueBytes = new byte[value];
     bb.get(valueBytes);
 
-    return new Entry<MapKey, byte[]>() {
-
-      @Override
-      public byte[] setValue(byte[] value) {
-        return null;
-      }
-
-      @Override
-      public byte[] getValue() {
-        return valueBytes;
-      }
-
-      @Override
-      public MapKey getKey() {
-        return mapKey;
-      }
-    };
+    return new Entry().withKey(mapKey).withValue(valueBytes);
   }
 
   @Override
-  public Entry<MapKey, byte[]> get(MapKey mapKey) throws IOException, SSTException {
+  public Entry get(MapKey mapKey) throws IOException, SSTException {
     if (mightContain(mapKey)) {
       int count = 0;
       long startPosition = 0;
@@ -264,7 +247,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
         try {
           while (fileChannel.position() < fileChannel.size()) {
             long savePosition = fileChannel.position();
-            Entry<MapKey, byte[]> entry = read();
+            Entry entry = read();
             int index = Math.round((count * CACHE_SIZE) / chunkCount);
             if (indexList[index] == 0) {
               indexList[index] = savePosition;
@@ -296,7 +279,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   }
 
   @Override
-  public Iterator<Entry<MapKey, byte[]>> entries() throws IOException, SSTException {
+  public Iterator<Entry> entries() throws IOException, SSTException {
     return new SSTableRAFIterator(this);
   }
 

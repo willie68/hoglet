@@ -1,7 +1,7 @@
 /**
  * 
  */
-package de.mcs.hoglet;
+package de.mcs.hoglet.sst;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.hoglet.Options;
 import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.jmeasurement.DefaultMonitor;
 import de.mcs.jmeasurement.MeasureFactory;

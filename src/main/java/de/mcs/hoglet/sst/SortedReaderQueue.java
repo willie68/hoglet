@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 
 import de.mcs.hoglet.Options;
 import de.mcs.utils.logging.Logger;
@@ -24,9 +23,9 @@ public class SortedReaderQueue implements AutoCloseable {
 
   private class QueuedReader implements AutoCloseable {
 
-    private Entry<MapKey, byte[]> nextEntry = null;
+    private Entry nextEntry = null;
     private SSTableReader reader;
-    private Iterator<Entry<MapKey, byte[]>> entries;
+    private Iterator<Entry> entries;
 
     public QueuedReader(SSTableReader reader) throws IOException, SSTException {
       this.reader = reader;
@@ -47,11 +46,11 @@ public class SortedReaderQueue implements AutoCloseable {
       return nextEntry.getKey();
     }
 
-    public Entry<MapKey, byte[]> next() {
+    public Entry next() {
       if (nextEntry == null) {
         return null;
       }
-      Entry<MapKey, byte[]> saveEntry = nextEntry;
+      Entry saveEntry = nextEntry;
       if (entries.hasNext()) {
         nextEntry = entries.next();
       } else {
@@ -99,7 +98,7 @@ public class SortedReaderQueue implements AutoCloseable {
     boolean found = true;
     while (found) {
       try {
-        SSTableReader reader = new SSTableReaderMMF(options, readingLevel, number);
+        SSTableReader reader = SSTableReaderFactory.getReader(options, readingLevel, number);
         readerList.add(new QueuedReader(reader));
         number++;
       } catch (SSTException e) {
@@ -118,7 +117,7 @@ public class SortedReaderQueue implements AutoCloseable {
     return false;
   }
 
-  public Entry<MapKey, byte[]> getNextEntry() {
+  public Entry getNextEntry() {
     MapKey nextEntry = null;
     int nextIndex = 0;
     for (int i = 0; i < readerList.size(); i++) {

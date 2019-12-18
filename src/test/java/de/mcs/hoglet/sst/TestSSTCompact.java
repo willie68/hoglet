@@ -1,7 +1,7 @@
 /**
  * 
  */
-package de.mcs.hoglet;
+package de.mcs.hoglet.sst;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Random;
 
 import org.junit.jupiter.api.AfterAll;
@@ -20,6 +19,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.hoglet.Options;
+import de.mcs.hoglet.sst.Entry;
 import de.mcs.hoglet.sst.MapKey;
 import de.mcs.hoglet.sst.MemoryTableWriter;
 import de.mcs.hoglet.sst.SSTCompacter;
@@ -124,7 +125,7 @@ class TestSSTCompact {
         assertTrue(reader.mightContain(key));
         if (rnd.nextInt(1000) == 1) {
           Monitor m = MeasureFactory.start("SSTableReader.read");
-          Entry<MapKey, byte[]> entry = reader.get(key);
+          Entry entry = reader.get(key);
           m.stop();
           assertNotNull(entry);
           assertTrue(key.equals(entry.getKey()));

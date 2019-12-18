@@ -1,8 +1,10 @@
-package de.mcs.hoglet;
+package de.mcs.utils;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.hoglet.ChunkEntry;
+import de.mcs.hoglet.ChunkList;
 import de.mcs.utils.GsonUtils;
 
 class TestGSON {

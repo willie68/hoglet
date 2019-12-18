@@ -1,4 +1,4 @@
-package de.mcs.hoglet;
+package de.mcs.hoglet.sst;
 
 import static org.junit.Assert.*;
 
@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Random;
 
 import org.junit.jupiter.api.AfterAll;
@@ -18,6 +17,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.hoglet.Options;
+import de.mcs.hoglet.sst.Entry;
 import de.mcs.hoglet.sst.MapKey;
 import de.mcs.hoglet.sst.MemoryTableWriter;
 import de.mcs.hoglet.sst.SSTException;
@@ -104,12 +105,12 @@ class TestSSTableReaderMMF {
       }
     });
 
-    Monitor mOpen = MeasureFactory.start("SSTTableReader.open");
+    Monitor mOpen = MeasureFactory.start("SSTableReaderMMF.open");
     try (SSTableReaderMMF reader = new SSTableReaderMMF(options, level, count)) {
       mOpen.stop();
       for (byte[] cs : keys) {
         MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
-        Monitor m = MeasureFactory.start("SSTTableReader.mightContain");
+        Monitor m = MeasureFactory.start("SSTableReaderMMF.mightContain");
         assertTrue(reader.mightContain(mapKey));
         m.stop();
       }
@@ -119,7 +120,7 @@ class TestSSTableReaderMMF {
   @Order(2)
   @Test
   void testAccess() throws IOException, SSTException {
-    System.out.println("SSTTableReader: check containing");
+    System.out.println("SSTableReader: check containing");
     Random rnd = new Random(System.currentTimeMillis());
     long countExisting = 0;
     try (SSTableReaderMMF reader = new SSTableReaderMMF(options, level, count)) {
@@ -130,12 +131,12 @@ class TestSSTableReaderMMF {
           byte[] cs = keys.get(index);
           MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
 
-          Monitor m = MeasureFactory.start("SSTTableReader.contain");
+          Monitor m = MeasureFactory.start("SSTableReaderMMF.contain");
           assertTrue(reader.mightContain(mapKey));
           m.stop();
 
-          m = MeasureFactory.start("SSTTableReader.get");
-          Entry<MapKey, byte[]> entry = reader.get(mapKey);
+          m = MeasureFactory.start("SSTableReaderMMF.get");
+          Entry entry = reader.get(mapKey);
           m.stop();
           assertNotNull(entry);
 
@@ -144,7 +145,7 @@ class TestSSTableReaderMMF {
 
           MapKey mapKey = MapKey.buildPrefixedKey(collection, ids.getByteID());
 
-          Monitor m = MeasureFactory.start("SSTTableReader.notContain");
+          Monitor m = MeasureFactory.start("SSTableReaderMMF.notContain");
           if (reader.mightContain(mapKey)) {
             reader.contains(mapKey);
           }

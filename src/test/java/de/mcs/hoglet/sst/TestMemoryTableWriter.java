@@ -1,4 +1,4 @@
-package de.mcs.hoglet;
+package de.mcs.hoglet.sst;
 
 import static org.junit.Assert.*;
 
@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Random;
 
 import org.junit.jupiter.api.AfterAll;
@@ -18,10 +17,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.hoglet.Options;
+import de.mcs.hoglet.sst.Entry;
 import de.mcs.hoglet.sst.MapKey;
 import de.mcs.hoglet.sst.MemoryTableWriter;
 import de.mcs.hoglet.sst.SSTException;
-import de.mcs.hoglet.sst.SSTableReaderRAF;
+import de.mcs.hoglet.sst.SSTableReader;
+import de.mcs.hoglet.sst.SSTableReaderFactory;
 import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
@@ -121,12 +123,12 @@ class TestMemoryTableWriter {
       }
     });
 
-    mOpen = MeasureFactory.start("SSTTableReader.open");
-    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, count)) {
+    mOpen = MeasureFactory.start("SSTableReader.open");
+    try (SSTableReader reader = SSTableReaderFactory.getReader(options, level, count)) {
       mOpen.stop();
       for (byte[] cs : keys) {
         MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
-        Monitor m = MeasureFactory.start("SSTTableReader.mightContain");
+        Monitor m = MeasureFactory.start("SSTableReader.mightContain");
         assertTrue(reader.mightContain(mapKey));
         m.stop();
       }
@@ -137,10 +139,10 @@ class TestMemoryTableWriter {
   @Order(2)
   @Test
   void testAccess() throws IOException, SSTException {
-    System.out.println("SSTTableReader: check containing");
+    System.out.println("SSTableReader: check containing");
     Random rnd = new Random(System.currentTimeMillis());
     long countExisting = 0;
-    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, count)) {
+    try (SSTableReader reader = SSTableReaderFactory.getReader(options, level, count)) {
       for (int i = 0; i < 1000; i++) {
         boolean existing = rnd.nextBoolean();
         if (existing) {
@@ -148,12 +150,12 @@ class TestMemoryTableWriter {
           byte[] cs = keys.get(index);
           MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
 
-          Monitor m = MeasureFactory.start("SSTTableReader.contain");
+          Monitor m = MeasureFactory.start("SSTableReader.contain");
           assertTrue(reader.mightContain(mapKey));
           m.stop();
 
-          m = MeasureFactory.start("SSTTableReader.get");
-          Entry<MapKey, byte[]> entry = reader.get(mapKey);
+          m = MeasureFactory.start("SSTableReader.get");
+          Entry entry = reader.get(mapKey);
           m.stop();
           assertNotNull(entry);
 
@@ -162,7 +164,7 @@ class TestMemoryTableWriter {
 
           MapKey mapKey = MapKey.buildPrefixedKey(collection, ids.getByteID());
 
-          Monitor m = MeasureFactory.start("SSTTableReader.notContain");
+          Monitor m = MeasureFactory.start("SSTableReader.notContain");
           if (reader.mightContain(mapKey)) {
             reader.contains(mapKey);
           }
@@ -181,22 +183,10 @@ class TestMemoryTableWriter {
     Assertions.assertThrows(SSTException.class, () -> {
       new MemoryTableWriter(options, 0, -1);
     });
-
-    Assertions.assertThrows(SSTException.class, () -> {
-      new SSTableReaderRAF(options, -1, 0);
-    });
-
-    Assertions.assertThrows(SSTException.class, () -> {
-      new SSTableReaderRAF(options, 0, -1);
-    });
   }
 
   @Test
   public void testFileCreation() throws IOException, SSTException {
-    Assertions.assertThrows(SSTException.class, () -> {
-      new SSTableReaderRAF(options, 2, 2);
-    });
-
     try (MemoryTableWriter writer = new MemoryTableWriter(options, 1, 2)) {
     }
     Assertions.assertThrows(SSTException.class, () -> {

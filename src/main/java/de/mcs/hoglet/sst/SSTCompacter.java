@@ -4,7 +4,6 @@
 package de.mcs.hoglet.sst;
 
 import java.io.IOException;
-import java.util.Map.Entry;
 
 import de.mcs.hoglet.Options;
 import de.mcs.utils.logging.Logger;
@@ -23,7 +22,6 @@ public class SSTCompacter {
   private int readingLevel;
   private int writingNumber;
   private Logger log = Logger.getLogger(this.getClass());
-  private boolean deleteSource;
 
   public SSTCompacter(Options options) {
     this.options = options;
@@ -46,7 +44,7 @@ public class SSTCompacter {
       try (MemoryTableWriter writer = new MemoryTableWriter(options, readingLevel + 1, writingNumber)) {
 
         while (queue.isAvailable()) {
-          Entry<MapKey, byte[]> entry = queue.getNextEntry();
+          Entry entry = queue.getNextEntry();
           if (entry != null) {
             writer.write(entry);
           }
@@ -55,7 +53,6 @@ public class SSTCompacter {
     } catch (Exception e) {
       log.error(e);
     }
-
   }
 
 }

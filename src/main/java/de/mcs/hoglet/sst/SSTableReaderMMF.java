@@ -15,7 +15,6 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.hash.BloomFilter;
@@ -24,6 +23,7 @@ import de.mcs.hoglet.Options;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.GsonUtils;
+import de.mcs.utils.MMFUtils;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -34,11 +34,11 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
 
   private class PositionEntry {
     int position;
-    Entry<MapKey, byte[]> entry;
+    Entry entry;
     int nextPosition;
   }
 
-  public class SSTableMMFIterator implements Iterator<Entry<MapKey, byte[]>> {
+  public class SSTableMMFIterator implements Iterator<Entry> {
     private SSTableReaderMMF reader;
     private PositionEntry next;
 
@@ -53,7 +53,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     }
 
     @Override
-    public Entry<MapKey, byte[]> next() {
+    public Entry next() {
       PositionEntry actual = next;
       try {
         next = reader.read(next.nextPosition);
@@ -162,7 +162,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
         mmfBuffer.position(startPosition);
         while (mmfBuffer.position() < mmfBuffer.limit()) {
           int savePosition = mmfBuffer.position();
-          Entry<MapKey, byte[]> entry = read();
+          Entry entry = read();
           int index = Math.round((count * CACHE_SIZE) / chunkCount);
           if (indexList[index] == 0) {
             indexList[index] = savePosition;
@@ -199,7 +199,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     }
   }
 
-  private Entry<MapKey, byte[]> read() throws IOException, SSTException {
+  private Entry read() throws IOException, SSTException {
     byte entryStart = mmfBuffer.get();
     if (MemoryTableWriter.ENTRY_START[0] != entryStart) {
       throw new SSTException("error on sst file");
@@ -219,27 +219,11 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     byte[] valueBytes = new byte[value];
     mmfBuffer.get(valueBytes);
 
-    return new Entry<MapKey, byte[]>() {
-
-      @Override
-      public byte[] setValue(byte[] value) {
-        return null;
-      }
-
-      @Override
-      public byte[] getValue() {
-        return valueBytes;
-      }
-
-      @Override
-      public MapKey getKey() {
-        return mapKey;
-      }
-    };
+    return new Entry().withKey(mapKey).withValue(valueBytes);
   }
 
   @Override
-  public Entry<MapKey, byte[]> get(MapKey mapKey) throws IOException, SSTException {
+  public Entry get(MapKey mapKey) throws IOException, SSTException {
     if (mightContain(mapKey)) {
       int count = 0;
       int startPosition = 0;
@@ -262,7 +246,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
         try {
           while (mmfBuffer.position() < mmfBuffer.limit()) {
             int savePosition = mmfBuffer.position();
-            Entry<MapKey, byte[]> entry = read();
+            Entry entry = read();
             int index = Math.round((count * CACHE_SIZE) / chunkCount);
             if (indexList[index] == 0) {
               indexList[index] = savePosition;
@@ -289,12 +273,13 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
 
   @Override
   public void close() throws IOException {
+    MMFUtils.unMapBuffer(mmfBuffer, fileChannel.getClass());
     fileChannel.close();
     raf.close();
   }
 
   @Override
-  public Iterator<Entry<MapKey, byte[]>> entries() throws IOException, SSTException {
+  public Iterator<Entry> entries() throws IOException, SSTException {
     return new SSTableMMFIterator(this);
   }
 

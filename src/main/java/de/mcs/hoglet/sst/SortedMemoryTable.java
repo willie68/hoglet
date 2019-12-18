@@ -5,7 +5,6 @@ package de.mcs.hoglet.sst;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import com.google.common.hash.BloomFilter;
@@ -16,7 +15,7 @@ import de.mcs.hoglet.Options;
  * @author w.klaas
  *
  */
-public class SortedMemoryTable implements MemoryTable, Iterable<Entry<MapKey, byte[]>> {
+public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
 
   private Options options;
   private Map<MapKey, byte[]> map;
@@ -116,7 +115,20 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry<MapKey, by
   }
 
   @Override
-  public Iterator<Entry<MapKey, byte[]>> iterator() {
-    return map.entrySet().iterator();
+  public Iterator<Entry> iterator() {
+    final Iterator<java.util.Map.Entry<MapKey, byte[]>> iterator = map.entrySet().iterator();
+    return new Iterator<Entry>() {
+
+      @Override
+      public boolean hasNext() {
+        return iterator.hasNext();
+      }
+
+      @Override
+      public Entry next() {
+        java.util.Map.Entry<MapKey, byte[]> next = iterator.next();
+        return new Entry().withKey(next.getKey()).withValue(next.getValue());
+      }
+    };
   }
 }

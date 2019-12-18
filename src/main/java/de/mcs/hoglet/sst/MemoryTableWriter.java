@@ -30,7 +30,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.Map.Entry;
 
 import com.google.common.hash.BloomFilter;
 
@@ -120,7 +119,7 @@ public class MemoryTableWriter implements Closeable {
    *          the key/value to add
    * @throws IOException
    */
-  public void write(Entry<MapKey, byte[]> entry) throws IOException {
+  public void write(Entry entry) throws IOException {
     bloomfilter.put(entry.getKey());
     // format of entry is start byte '@', length of entry, key, seperator '#',
     // value
