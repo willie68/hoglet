@@ -3,6 +3,8 @@
  */
 package de.mcs.hoglet.sst;
 
+import de.mcs.hoglet.Operation;
+
 /**
  * This class encasulate a database entry with key and value
  * 
@@ -11,6 +13,7 @@ package de.mcs.hoglet.sst;
  */
 public class Entry {
   private MapKey key;
+  private Operation operation;
   private byte[] value;
 
   /**
@@ -59,6 +62,31 @@ public class Entry {
    */
   public Entry withKey(MapKey key) {
     setKey(key);
+    return this;
+  }
+
+  /**
+   * @return the operation
+   */
+  public Operation getOperation() {
+    return operation;
+  }
+
+  /**
+   * @param operation
+   *          the operation to set
+   */
+  public void setOperation(Operation operation) {
+    this.operation = operation;
+  }
+
+  /**
+   * @param operation
+   *          the operation to set
+   * @return
+   */
+  public Entry withOperation(Operation operation) {
+    this.operation = operation;
     return this;
   }
 }

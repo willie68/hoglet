@@ -9,6 +9,7 @@ import java.util.TreeMap;
 
 import com.google.common.hash.BloomFilter;
 
+import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
 
 /**
@@ -17,8 +18,27 @@ import de.mcs.hoglet.Options;
  */
 public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
 
+  private static class MapEntry {
+    Operation operation;
+    byte[] value;
+
+    static MapEntry newMapEntry() {
+      return new MapEntry();
+    }
+
+    public MapEntry with(Operation operation) {
+      this.operation = operation;
+      return this;
+    }
+
+    public MapEntry with(byte[] value) {
+      this.value = value;
+      return this;
+    }
+  }
+
   private Options options;
-  private Map<MapKey, byte[]> map;
+  private Map<MapKey, MapEntry> map;
   private BloomFilter<MapKey> bloomfilter;
   private int missed;
   private int memsize;
@@ -26,8 +46,6 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
   public SortedMemoryTable(Options options) {
     this.options = options;
     map = new TreeMap<>();
-    // map = new HashMap<>(64 * 1024 * 1024);
-
     if (options.isMemActiveBloomFilter()) {
       MapKeyFunnel funnel = new MapKeyFunnel();
       bloomfilter = BloomFilter.create(funnel, 100000, 0.01);
@@ -65,7 +83,12 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
     if ((bloomfilter != null) && !bloomfilter.mightContain(prefixedKey)) {
       return null;
     }
-    byte[] bs = map.get(prefixedKey);
+    MapEntry mapEntry = map.get(prefixedKey);
+    if (mapEntry == null) {
+      missed++;
+      return null;
+    }
+    byte[] bs = mapEntry.value;
     if (bs == null) {
       missed++;
     }
@@ -73,22 +96,25 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
   }
 
   @Override
-  public byte[] add(String collection, byte[] key, byte[] value) {
+  public byte[] add(String collection, byte[] key, Operation operation, byte[] value) {
     checkCollectionName(collection);
 
     MapKey prefixedKey = MapKey.buildPrefixedKey(collection, key);
     if (bloomfilter != null) {
       bloomfilter.put(prefixedKey);
     }
-    memsize += prefixedKey.getKey().length + value.length + 40;
-    return map.put(prefixedKey, value);
+    memsize += prefixedKey.getKey().length + 1 + value.length + 40;
+    MapEntry mapEntry = MapEntry.newMapEntry().with(operation).with(value);
+    map.put(prefixedKey, mapEntry);
+    return value;
   }
 
   @Override
   public byte[] remove(String collection, byte[] key) {
     checkCollectionName(collection);
     MapKey prefixedKey = MapKey.buildPrefixedKey(collection, key);
-    return map.remove(prefixedKey);
+    MapEntry mapEntry = map.remove(prefixedKey);
+    return mapEntry.value;
   }
 
   @Override
@@ -116,7 +142,7 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
 
   @Override
   public Iterator<Entry> iterator() {
-    final Iterator<java.util.Map.Entry<MapKey, byte[]>> iterator = map.entrySet().iterator();
+    final Iterator<java.util.Map.Entry<MapKey, MapEntry>> iterator = map.entrySet().iterator();
     return new Iterator<Entry>() {
 
       @Override
@@ -126,8 +152,9 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
 
       @Override
       public Entry next() {
-        java.util.Map.Entry<MapKey, byte[]> next = iterator.next();
-        return new Entry().withKey(next.getKey()).withValue(next.getValue());
+        java.util.Map.Entry<MapKey, MapEntry> next = iterator.next();
+        return new Entry().withKey(next.getKey()).withValue(next.getValue().value)
+            .withOperation(next.getValue().operation);
       }
     };
   }

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.sst.Entry;
 import de.mcs.hoglet.sst.MapKey;
@@ -79,7 +80,7 @@ class TestMemoryTableWriter {
       keys.add(key);
 
       Monitor m = MeasureFactory.start("SortedMemoryTable.add");
-      table.add(collection, key, key);
+      table.add(collection, key, Operation.ADD, key);
       m.stop();
     }
 

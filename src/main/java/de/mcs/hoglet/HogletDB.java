@@ -238,7 +238,7 @@ public class HogletDB implements Closeable {
       log.debug("putting into vlog file %s", vLog.getName());
       VLogEntryInfo info = vLog.put(collection, key, 0, value, Operation.ADD);
 
-      return memoryTable.add(collection, key, info.asJson().getBytes(StandardCharsets.UTF_8));
+      return memoryTable.add(collection, key, Operation.ADD, info.asJson().getBytes(StandardCharsets.UTF_8));
     } catch (IOException e) {
       throw new HogletDBException(e);
     }

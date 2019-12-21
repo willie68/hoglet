@@ -19,6 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.hash.BloomFilter;
 
+import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
@@ -215,11 +216,18 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     if (MemoryTableWriter.ENTRY_SEPERATOR[0] != entrySeperator) {
       throw new SSTException("error on sst file");
     }
+    byte opByte = mmfBuffer.get();
+    Operation operation = Operation.values()[opByte];
+
+    entrySeperator = mmfBuffer.get();
+    if (MemoryTableWriter.ENTRY_SEPERATOR[0] != entrySeperator) {
+      throw new SSTException("error on sst file");
+    }
     value = mmfBuffer.getInt();
     byte[] valueBytes = new byte[value];
     mmfBuffer.get(valueBytes);
 
-    return new Entry().withKey(mapKey).withValue(valueBytes);
+    return new Entry().withKey(mapKey).withValue(valueBytes).withOperation(operation);
   }
 
   @Override

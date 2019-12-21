@@ -1,5 +1,7 @@
 package de.mcs.hoglet.sst;
 
+import de.mcs.hoglet.Operation;
+
 public interface MemoryTable {
 
   boolean containsKey(String collection, byte[] key);
@@ -8,7 +10,7 @@ public interface MemoryTable {
 
   byte[] remove(String collection, byte[] key);
 
-  byte[] add(String collection, byte[] key, byte[] bytes);
+  byte[] add(String collection, byte[] key, Operation operation, byte[] bytes);
 
   int size();
 

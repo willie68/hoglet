@@ -124,13 +124,15 @@ public class MemoryTableWriter implements Closeable {
     // format of entry is start byte '@', length of entry, key, seperator '#',
     // value
     // length of entry is key, seperator '#', value
-    int entryLength = 4 + entry.getKey().getKey().length + 1 + 4 + entry.getValue().length;
+    int entryLength = 4 + entry.getKey().getKey().length + 1 + 1 + 1 + 4 + entry.getValue().length;
     int bufLength = 1 + 4 + entryLength;
     ByteBuffer bb = ByteBuffer.allocate(bufLength);
     bb.put(ENTRY_START);
     bb.putInt(entryLength);
     bb.putInt(entry.getKey().getKey().length);
     bb.put(entry.getKey().getKey());
+    bb.put(ENTRY_SEPERATOR);
+    bb.put((byte) entry.getOperation().ordinal());
     bb.put(ENTRY_SEPERATOR);
     bb.putInt(entry.getValue().length);
     bb.put(entry.getValue());

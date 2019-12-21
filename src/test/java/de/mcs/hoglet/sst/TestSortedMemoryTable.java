@@ -14,8 +14,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
-import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.jmeasurement.DefaultMonitor;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.MeasurePoint;
@@ -65,7 +65,7 @@ class TestSortedMemoryTable {
       byte[] key = ids.getByteID();
       keys.add(key);
       Monitor m = MeasureFactory.start("SortedMemoryTable.add");
-      table.add(collection, key, key);
+      table.add(collection, key, Operation.ADD, key);
       m.stop();
     }
 
@@ -108,13 +108,13 @@ class TestSortedMemoryTable {
       byte[] key = ids.getByteID();
       assertTrue(myTable.isAvailbleForWriting());
       Monitor m = MeasureFactory.start("SortedMemoryTable.add");
-      myTable.add(collection, key, key);
+      myTable.add(collection, key, Operation.ADD, key);
       m.stop();
     }
 
     byte[] key = ids.getByteID();
     assertFalse(myTable.isAvailbleForWriting());
-    myTable.add(collection, key, key);
+    myTable.add(collection, key, Operation.ADD, key);
     // Assertions.assertThrows(HogletDBException.class, () -> {
     // });
   }
@@ -132,18 +132,18 @@ class TestSortedMemoryTable {
       // System.out.printf("%07d: %d %d\n", i, maxTableSize, countBytes);
       if (countBytes <= maxTableSize) {
         assertTrue(myTable.isAvailbleForWriting(), String.format("error on %d", i));
-        myTable.add(collection, bs, bs);
+        myTable.add(collection, bs, Operation.ADD, bs);
       } else {
         assertFalse(myTable.isAvailbleForWriting());
         break;
       }
       // countBytes += prefixedKey.getKey().length + value.length + 40
-      countBytes += collection.length() + 1 + bs.length + 40 + bs.length;
+      countBytes += collection.length() + 1 + bs.length + 1 + 40 + bs.length;
     }
 
     byte[] key = ids.getByteID();
     assertFalse(myTable.isAvailbleForWriting());
-    myTable.add(collection, key, key);
+    myTable.add(collection, key, Operation.ADD, key);
     // Assertions.assertThrows(HogletDBException.class, () -> {
     // });
   }

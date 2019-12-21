@@ -19,14 +19,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
-import de.mcs.hoglet.sst.Entry;
-import de.mcs.hoglet.sst.MapKey;
-import de.mcs.hoglet.sst.MemoryTableWriter;
-import de.mcs.hoglet.sst.SSTCompacter;
-import de.mcs.hoglet.sst.SSTableReader;
-import de.mcs.hoglet.sst.SSTableReaderMMF;
-import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
@@ -90,7 +84,7 @@ class TestSSTCompact {
         int value = rnd.nextInt(keys.size());
         byte[] key = keys.remove(value);
         Monitor m = MeasureFactory.start("SortedMemoryTable.add");
-        table.add(collection, key, key);
+        table.add(collection, key, Operation.ADD, key);
         m.stop();
       }
 

@@ -17,13 +17,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
-import de.mcs.hoglet.sst.Entry;
-import de.mcs.hoglet.sst.MapKey;
-import de.mcs.hoglet.sst.MemoryTableWriter;
-import de.mcs.hoglet.sst.SSTException;
-import de.mcs.hoglet.sst.SSTableReaderMMF;
-import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.IDGenerator;
@@ -76,7 +71,7 @@ class TestSSTableReaderMMF {
     for (int i = 0; i < MAX_KEYS; i++) {
       byte[] key = ids.getByteID();
       keys.add(key);
-      table.add(collection, key, key);
+      table.add(collection, key, Operation.ADD, key);
     }
 
     System.out.println("checking key/values");
