@@ -99,4 +99,9 @@ public class DatabaseUtils {
     });
     return listFiles;
   }
+
+  public File getSSTFilePath(int level, int number) {
+    File dbFolder = new File(options.getPath());
+    return getSSTFilePath(dbFolder, level, number);
+  }
 }

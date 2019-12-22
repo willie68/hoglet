@@ -20,6 +20,7 @@ import com.google.common.hash.BloomFilter;
 
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.GsonUtils;
@@ -77,6 +78,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   private long[] indexList;
   private MapKey[] mapkeyList;
   private ReentrantLock readLock;
+  private DatabaseUtils databaseUtils;
 
   public SSTableReaderRAF(Options options, int level, int number) throws SSTException, IOException {
     this.options = options;
@@ -86,7 +88,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     this.mapkeyList = new MapKey[CACHE_SIZE];
     Arrays.fill(this.indexList, 0);
     this.chunkCount = 0;
-    readLock = new ReentrantLock();
+    this.readLock = new ReentrantLock();
     init();
   }
 
@@ -101,15 +103,16 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     long keyCount = ((long) Math.pow(options.getLvlTableCount(), level - 1)) * options.getMemTableMaxKeys();
     bloomfilter = BloomFilter.create(funnel, keyCount, 0.01);
 
+    databaseUtils = DatabaseUtils.newDatabaseUtils(options);
     openSSTable();
 
   }
 
   private void openSSTable() throws SSTException, IOException {
-    filename = String.format("sst_%02d_%02d.sst", level, number);
+    filename = DatabaseUtils.getSSTFileName(level, number);
     log.debug("reading sst file: %s", filename);
 
-    sstFile = new File(options.getPath(), filename);
+    sstFile = databaseUtils.getSSTFilePath(level, number);
     if (!sstFile.exists()) {
       throw new SSTException(String.format("sst file for level %d number %d does not exists.", level, number));
     }
@@ -154,7 +157,6 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
           startPosition = indexList[i];
         }
       }
-
       readLock.lock();
       try {
         fileChannel.position(startPosition);
