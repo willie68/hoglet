@@ -50,7 +50,8 @@ public class Options {
         .withMemTableMaxSize(64 * 1024 * 1024)
         .withMemActiveBloomFilter(true)
         .withLvlTableCount(10)
-        .withSSTReadStrategy(SSTReadStrategy.MMF);
+        .withSSTReadStrategy(SSTReadStrategy.MMF)
+        .withSSTMaxLevels(10);
     // @formatter:on
   }
 
@@ -140,7 +141,17 @@ public class Options {
    */
   private int lvlTableCount;
 
+  /**
+   * setting the strategy for reading SST files.
+   * RAF: read from random access file directly with buffers
+   * MMF: using memory mapped files.
+   */
   private SSTReadStrategy sstReadStrategy;
+
+  /**
+   * max count of levels
+   */
+  private int sstMaxLevels;
 
   /**
    * @return the vCntDeleteTreshHold
@@ -520,6 +531,26 @@ public class Options {
    */
   public void setSstReadStrategy(SSTReadStrategy sstReadStrategy) {
     this.sstReadStrategy = sstReadStrategy;
+  }
+
+  private Options withSSTMaxLevels(int sstMaxLevels) {
+    setSSTMaxLevels(sstMaxLevels);
+    return this;
+  }
+
+  /**
+   * @return the sstMaxLevels
+   */
+  public int getSSTMaxLevels() {
+    return sstMaxLevels;
+  }
+
+  /**
+   * @param sstMaxLevels
+   *          the sstMaxLevels to set
+   */
+  public void setSSTMaxLevels(int sstMaxLevels) {
+    this.sstMaxLevels = sstMaxLevels;
   }
 
 }

@@ -28,11 +28,23 @@ import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.common.eventbus.AsyncEventBus;
+import com.google.common.eventbus.EventBus;
+
+import de.mcs.hoglet.event.WriteImmutableTableEventListener;
+import de.mcs.hoglet.event.WriteImmutableTableEventListener.WriteImmutableTableEvent;
+import de.mcs.hoglet.sst.MapKey;
 import de.mcs.hoglet.sst.MemoryTable;
+import de.mcs.hoglet.sst.SSTException;
+import de.mcs.hoglet.sst.SSTableReader;
+import de.mcs.hoglet.sst.SSTableReaderFactory;
 import de.mcs.hoglet.sst.SortedMemoryTable;
+import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.hoglet.vlog.VLog;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.hoglet.vlog.VLogList;
@@ -56,9 +68,14 @@ public class HogletDB implements Closeable {
   private VLogList vLogList;
   private MemoryTable memoryTable;
   private MemoryTable immutableTable;
+  private ReentrantLock immutableTableLock;
   private boolean readonly;
   private FileChannel channel;
   private FileLock writeLock;
+
+  private SSTableReader[][] tableMatrix;
+  private DatabaseUtils databaseUtils;
+  private EventBus eventBus;
 
   /**
    * create a new instance of the hoglet key value store with specifig options.
@@ -101,6 +118,37 @@ public class HogletDB implements Closeable {
     vLogList.setReadonly(readonly);
     memoryTable = getNewMemoryTable();
     immutableTable = null;
+    immutableTableLock = new ReentrantLock();
+    databaseUtils = DatabaseUtils.newDatabaseUtils(options);
+    initTableMatrix();
+    initEventbus();
+  }
+
+  private void initEventbus() {
+    eventBus = new AsyncEventBus(Executors.newSingleThreadExecutor());
+    WriteImmutableTableEventListener writeImmutableTableEvent = new WriteImmutableTableEventListener(this);
+    eventBus.register(writeImmutableTableEvent);
+  }
+
+  private void initTableMatrix() throws HogletDBException {
+    tableMatrix = new SSTableReader[options.getSSTMaxLevels()][options.getLvlTableCount()];
+    for (int i = 0; i < tableMatrix.length; i++) {
+      for (int j = 0; j < tableMatrix[i].length; j++) {
+        tableMatrix[i][j] = null;
+      }
+    }
+
+    for (int level = 0; level < tableMatrix.length; level++) {
+      File[] sstFiles = databaseUtils.getSSTFiles(level);
+      for (int number = 0; number < sstFiles.length; number++) {
+        try {
+          SSTableReader tableReader = SSTableReaderFactory.getReader(options, level, number);
+          tableMatrix[level][number] = tableReader;
+        } catch (SSTException | IOException e) {
+          throw new HogletDBException(e);
+        }
+      }
+    }
   }
 
   private SortedMemoryTable getNewMemoryTable() {
@@ -237,6 +285,25 @@ public class HogletDB implements Closeable {
       VLog vLog = vLogList.getNextAvailableVLog();
       log.debug("putting into vlog file %s", vLog.getName());
       VLogEntryInfo info = vLog.put(collection, key, 0, value, Operation.ADD);
+      if (memoryTable.isAvailbleForWriting()) {
+        return memoryTable.add(collection, key, Operation.ADD, info.asJson().getBytes(StandardCharsets.UTF_8));
+      }
+      int count = 0;
+      while ((immutableTable != null) && (count < 1000)) {
+        // wait for writing of table...
+        try {
+          Thread.sleep(10);
+        } catch (Exception e) {
+        }
+        count++;
+      }
+      if (immutableTable != null) {
+        throw new HogletDBException("can't add value to db. db not ready...");
+      }
+
+      immutableTable = memoryTable;
+      memoryTable = getNewMemoryTable();
+      eventBus.post(new WriteImmutableTableEvent());
 
       return memoryTable.add(collection, key, Operation.ADD, info.asJson().getBytes(StandardCharsets.UTF_8));
     } catch (IOException e) {
@@ -264,16 +331,45 @@ public class HogletDB implements Closeable {
     if (isReadonly()) {
       throw new HogletDBException("hoglet is in readonly mode");
     }
-    byte[] bs = memoryTable.remove(collection, key);
-    if (bs == null) {
+    // check if key exists in db
+    if (!keyMightExistsInTableBelow(collection, key)) {
+      byte[] bs = memoryTable.remove(collection, key);
+      if (bs == null) {
+        return null;
+      }
+      VLogEntryInfo info = VLogEntryInfo.fromJson(new String(bs, StandardCharsets.UTF_8));
+      try (VLog vLog = vLogList.getVLog(info.getvLogName())) {
+        return vLog.getValue(info.getStartBinary(), info.getBinarySize());
+      } catch (IOException e) {
+        throw new HogletDBException(e);
+      }
+    } else {
+      memoryTable.add(collection, key, Operation.DELETE, new byte[0]);
       return null;
     }
-    VLogEntryInfo info = VLogEntryInfo.fromJson(new String(bs, StandardCharsets.UTF_8));
-    try (VLog vLog = vLogList.getVLog(info.getvLogName())) {
-      return vLog.getValue(info.getStartBinary(), info.getBinarySize());
-    } catch (IOException e) {
-      throw new HogletDBException(e);
+  }
+
+  private boolean keyMightExistsInTableBelow(String collection, byte[] key) {
+    immutableTableLock.lock();
+    try {
+      if ((immutableTable != null) && immutableTable.containsKey(collection, key)) {
+        return true;
+      }
+    } finally {
+      immutableTableLock.unlock();
     }
+    for (int level = 0; level < tableMatrix.length; level++) {
+      for (int number = 0; number < tableMatrix[level].length; number++) {
+        if (tableMatrix[level][number] != null) {
+          SSTableReader ssTableReader = tableMatrix[level][number];
+          MapKey mapkey = MapKey.buildPrefixedKey(collection, key);
+          if (ssTableReader.mightContain(mapkey)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   @Override
@@ -311,5 +407,11 @@ public class HogletDB implements Closeable {
 
   public boolean isReadonly() {
     return readonly;
+  }
+
+  public void writeImmutableTable() {
+    if (immutableTable == null) {
+      return;
+    }
   }
 }
