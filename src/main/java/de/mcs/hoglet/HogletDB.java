@@ -126,6 +126,11 @@ public class HogletDB implements Closeable {
     replayVlog();
   }
 
+  private void replayVlog() {
+    // TODO get the newest SST file, there from get the last VLogInfoEntry
+    // TODO this will be the starting point for the replay.
+  }
+
   private void initEventbus() {
     eventBus = new AsyncEventBus(Executors.newSingleThreadExecutor());
     WriteImmutableTableEventListener writeImmutableTableEvent = new WriteImmutableTableEventListener(this);

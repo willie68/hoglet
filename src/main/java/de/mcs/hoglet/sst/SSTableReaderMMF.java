@@ -298,7 +298,6 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
 
   @Override
   public VLogEntryInfo getLastVLogEntry() {
-
     return sstStatus.getLastVLogEntry();
   }
 
