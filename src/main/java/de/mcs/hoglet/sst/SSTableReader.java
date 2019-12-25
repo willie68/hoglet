@@ -7,6 +7,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
 
+import de.mcs.hoglet.vlog.VLogEntryInfo;
+
 /**
  * @author w.klaas
  *
@@ -55,5 +57,12 @@ public interface SSTableReader extends Closeable {
    * @throws SSTException
    */
   Iterator<Entry> entries() throws IOException, SSTException;
+
+  /**
+   * getting the last vlog entry for this sst file.
+   * 
+   * @return VLogEntryInfo
+   */
+  VLogEntryInfo getLastVLogEntry();
 
 }

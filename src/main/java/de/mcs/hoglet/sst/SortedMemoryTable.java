@@ -11,6 +11,7 @@ import com.google.common.hash.BloomFilter;
 
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.vlog.VLogEntryInfo;
 
 /**
  * @author w.klaas
@@ -42,6 +43,7 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
   private BloomFilter<MapKey> bloomfilter;
   private int missed;
   private int memsize;
+  private VLogEntryInfo lastVLogEntry;
 
   public SortedMemoryTable(Options options) {
     this.options = options;
@@ -157,5 +159,20 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
             .withOperation(next.getValue().operation);
       }
     };
+  }
+
+  /**
+   * @return the lastVLogEntry
+   */
+  public VLogEntryInfo getLastVLogEntry() {
+    return lastVLogEntry;
+  }
+
+  /**
+   * @param lastVLogEntry
+   *          the lastVLogEntry to set
+   */
+  public void setLastVLogEntry(VLogEntryInfo lastVLogEntry) {
+    this.lastVLogEntry = lastVLogEntry;
   }
 }

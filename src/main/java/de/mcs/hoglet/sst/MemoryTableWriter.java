@@ -35,6 +35,7 @@ import com.google.common.hash.BloomFilter;
 
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.utils.DatabaseUtils;
+import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.utils.GsonUtils;
 import de.mcs.utils.logging.Logger;
 
@@ -56,6 +57,7 @@ public class MemoryTableWriter implements Closeable {
   private RandomAccessFile raf;
   private FileChannel fileChannel;
   private long chunkCount;
+  private VLogEntryInfo lastVLogEntry;
 
   /**
    * creating a new SS Table writer in the desired path.
@@ -157,7 +159,7 @@ public class MemoryTableWriter implements Closeable {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     bloomfilter.writeTo(out);
     SSTStatus sstStatus = new SSTStatus().withBloomfilter(out.toByteArray()).withChunkCount(chunkCount)
-        .withCreatedAt(new Date());
+        .withCreatedAt(new Date()).withLastVLogEntry(lastVLogEntry);
     String json = GsonUtils.getJsonMapper().toJson(sstStatus);
     fileChannel.write(StandardCharsets.UTF_8.encode(json));
     ByteBuffer bb = ByteBuffer.allocate(128);
@@ -170,6 +172,21 @@ public class MemoryTableWriter implements Closeable {
     fileChannel.force(true);
     fileChannel.close();
     raf.close();
+  }
+
+  /**
+   * @return the lastVLogEntry
+   */
+  public VLogEntryInfo getLastVLogEntry() {
+    return lastVLogEntry;
+  }
+
+  /**
+   * @param lastVLogEntry
+   *          the lastVLogEntry to set
+   */
+  public void setLastVLogEntry(VLogEntryInfo lastVLogEntry) {
+    this.lastVLogEntry = lastVLogEntry;
   }
 
 }

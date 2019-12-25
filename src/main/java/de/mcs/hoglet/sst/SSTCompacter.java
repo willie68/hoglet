@@ -49,6 +49,7 @@ public class SSTCompacter {
             writer.write(entry);
           }
         }
+        writer.setLastVLogEntry(queue.getLastVLogEntry());
       }
     } catch (Exception e) {
       log.error(e);

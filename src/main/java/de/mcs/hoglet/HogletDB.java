@@ -122,6 +122,8 @@ public class HogletDB implements Closeable {
     databaseUtils = DatabaseUtils.newDatabaseUtils(options);
     initTableMatrix();
     initEventbus();
+
+    replayVlog();
   }
 
   private void initEventbus() {
@@ -162,7 +164,7 @@ public class HogletDB implements Closeable {
    *          the key to test
    * @return true if the key is present in the database, otherwise false
    */
-  public boolean contains(byte[] key) throws HogletDBException {
+  public boolean contains(byte[] key) {
     return containsKey(DEFAULT_COLLECTION, key);
   }
 
@@ -207,7 +209,7 @@ public class HogletDB implements Closeable {
    * @param key
    * @return
    */
-  public boolean contains(String collection, byte[] key) throws HogletDBException {
+  public boolean contains(String collection, byte[] key) {
     return containsKey(collection, key);
   }
 
@@ -302,6 +304,7 @@ public class HogletDB implements Closeable {
       }
 
       immutableTable = memoryTable;
+      immutableTable.setLastVLogEntry(info);
       memoryTable = getNewMemoryTable();
       eventBus.post(new WriteImmutableTableEvent());
 
@@ -319,7 +322,6 @@ public class HogletDB implements Closeable {
       try {
         Thread.sleep(10);
       } catch (InterruptedException e) {
-        // TODO Auto-generated catch block
         e.printStackTrace();
       }
     }

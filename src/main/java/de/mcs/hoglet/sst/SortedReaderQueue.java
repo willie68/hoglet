@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -69,6 +70,7 @@ public class SortedReaderQueue implements AutoCloseable {
   private List<QueuedReader> readerList;
   private Logger log = Logger.getLogger(this.getClass());
   private boolean deleteSource;
+  private VLogEntryInfo lastVLogEntry;
 
   public SortedReaderQueue(Options options) {
     this.readerList = new ArrayList<>();
@@ -100,6 +102,7 @@ public class SortedReaderQueue implements AutoCloseable {
       try {
         SSTableReader reader = SSTableReaderFactory.getReader(options, readingLevel, number);
         readerList.add(new QueuedReader(reader));
+        lastVLogEntry = reader.getLastVLogEntry();
         number++;
       } catch (SSTException e) {
         found = false;
@@ -136,6 +139,10 @@ public class SortedReaderQueue implements AutoCloseable {
     }
     QueuedReader reader = readerList.get(nextIndex);
     return reader.next();
+  }
+
+  public VLogEntryInfo getLastVLogEntry() {
+    return lastVLogEntry;
   }
 
 }

@@ -21,6 +21,7 @@ import com.google.common.hash.BloomFilter;
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.utils.DatabaseUtils;
+import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.GsonUtils;
@@ -79,6 +80,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   private MapKey[] mapkeyList;
   private ReentrantLock readLock;
   private DatabaseUtils databaseUtils;
+  private SSTStatus sstStatus;
 
   public SSTableReaderRAF(Options options, int level, int number) throws SSTException, IOException {
     this.options = options;
@@ -131,7 +133,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     bb.rewind();
     CharBuffer json = StandardCharsets.UTF_8.decode(bb);
     String jsonString = json.toString();
-    SSTStatus sstStatus = GsonUtils.getJsonMapper().fromJson(jsonString, SSTStatus.class);
+    sstStatus = GsonUtils.getJsonMapper().fromJson(jsonString, SSTStatus.class);
     chunkCount = sstStatus.getChunkCount();
 
     MapKeyFunnel funnel = new MapKeyFunnel();
@@ -293,4 +295,8 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     return new SSTableRAFIterator(this);
   }
 
+  @Override
+  public VLogEntryInfo getLastVLogEntry() {
+    return sstStatus.getLastVLogEntry();
+  }
 }

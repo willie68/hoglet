@@ -1,6 +1,7 @@
 package de.mcs.hoglet.sst;
 
 import de.mcs.hoglet.Operation;
+import de.mcs.hoglet.vlog.VLogEntryInfo;
 
 public interface MemoryTable {
 
@@ -15,5 +16,7 @@ public interface MemoryTable {
   int size();
 
   boolean isAvailbleForWriting();
+
+  void setLastVLogEntry(VLogEntryInfo info);
 
 }

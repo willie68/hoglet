@@ -23,8 +23,11 @@ package de.mcs.hoglet.sst;
 
 import java.util.Date;
 
+import de.mcs.hoglet.vlog.VLogEntryInfo;
+
 /**
  * This class contains the status of a sst table file
+ * 
  * @author wklaa_000
  *
  */
@@ -32,6 +35,7 @@ public class SSTStatus {
   private byte[] bloomfilter;
   private long chunkCount;
   private Date createdAt;
+  private VLogEntryInfo lastVLogEntry;
 
   /**
    * @return the bloomfilter
@@ -41,15 +45,17 @@ public class SSTStatus {
   }
 
   /**
-   * @param bloomfilter the bloomfilter to set
+   * @param bloomfilter
+   *          the bloomfilter to set
    */
   public void setBloomfilter(byte[] bloomfilter) {
     this.bloomfilter = bloomfilter;
   }
 
   /**
-   * @param bloomfilter the bloomfilter to set
-   * @return 
+   * @param bloomfilter
+   *          the bloomfilter to set
+   * @return
    */
   public SSTStatus withBloomfilter(byte[] bloomfilter) {
     this.bloomfilter = bloomfilter;
@@ -64,15 +70,17 @@ public class SSTStatus {
   }
 
   /**
-   * @param chunkCount the chunkCount to set
+   * @param chunkCount
+   *          the chunkCount to set
    */
   public void setChunkCount(long chunkCount) {
     this.chunkCount = chunkCount;
   }
 
   /**
-   * @param chunkCount the chunkCount to set
-   * @return 
+   * @param chunkCount
+   *          the chunkCount to set
+   * @return
    */
   public SSTStatus withChunkCount(long chunkCount) {
     this.chunkCount = chunkCount;
@@ -87,18 +95,45 @@ public class SSTStatus {
   }
 
   /**
-   * @param createdAt the createdAt to set
+   * @param createdAt
+   *          the createdAt to set
    */
   public void setCreatedAt(Date createdAt) {
     this.createdAt = createdAt;
   }
 
   /**
-   * @param createdAt the createdAt to set
-   * @return 
+   * @param createdAt
+   *          the createdAt to set
+   * @return
    */
   public SSTStatus withCreatedAt(Date createdAt) {
     this.createdAt = createdAt;
+    return this;
+  }
+
+  /**
+   * @return the lastVLogName
+   */
+  public VLogEntryInfo getLastVLogEntry() {
+    return lastVLogEntry;
+  }
+
+  /**
+   * @param lastVLogName
+   *          the lastVLogName to set
+   */
+  public void setLastVLogEntry(VLogEntryInfo lastVLogEntry) {
+    this.lastVLogEntry = lastVLogEntry;
+  }
+
+  /**
+   * @param lastVLogName
+   *          the lastVLogName to set
+   * @return
+   */
+  public SSTStatus withLastVLogEntry(VLogEntryInfo lastVLogEntry) {
+    this.lastVLogEntry = lastVLogEntry;
     return this;
   }
 
