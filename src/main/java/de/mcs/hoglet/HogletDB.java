@@ -98,6 +98,10 @@ public class HogletDB implements Closeable {
     if (!dbFolder.exists()) {
       dbFolder.mkdirs();
     }
+    File vlogFolder = new File(options.getVlogPath());
+    if (!vlogFolder.exists()) {
+      vlogFolder.mkdirs();
+    }
     File lockFile = new File(dbFolder, "LOCK");
     if (!lockFile.exists()) {
       try {

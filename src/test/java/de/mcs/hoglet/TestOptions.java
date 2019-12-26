@@ -21,7 +21,7 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
@@ -40,6 +40,7 @@ class TestOptions {
     assertEquals(src.getMemTableMaxKeys(), dest.getMemTableMaxKeys());
     assertEquals(src.getMemTableMaxSize(), dest.getMemTableMaxSize());
     assertEquals(src.getPath(), dest.getPath());
+    assertEquals(src.getVlogPath(), dest.getVlogPath());
     assertEquals(src.getVLogAge(), dest.getVLogAge());
     assertEquals(src.getVlogMaxChunkCount(), dest.getVlogMaxChunkCount());
     assertEquals(src.getVlogMaxFileCount(), dest.getVlogMaxFileCount());

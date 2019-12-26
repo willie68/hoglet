@@ -73,7 +73,7 @@ public class VLogList {
         File file = null;
         do {
           i++;
-          file = VLogFile.getFilePathName(new File(options.getPath()), i);
+          file = VLogFile.getFilePathName(new File(options.getVlogPath()), i);
         } while (file.exists());
         VLogFile vLogFile = new VLogFile(options, i);
         vLog = VLog.wrap(vLogFile);
@@ -107,7 +107,7 @@ public class VLogList {
     if (vLog == null) {
       vLog = readMap.getObjectFromExternalKey(containerName);
       if (vLog == null) {
-        File file = new File(new File(options.getPath()), containerName);
+        File file = new File(new File(options.getVlogPath()), containerName);
         if (!file.exists()) {
           throw new HogletDBException(String.format("vlog not found: %s", file.getName()));
         }

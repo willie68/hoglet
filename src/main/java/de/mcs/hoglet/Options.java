@@ -65,6 +65,11 @@ public class Options {
   private String path;
 
   /**
+   * path to the database folder for the vlog files (defaults to same folder as path)
+   */
+  private String vlogPath;
+
+  /**
    * blobs will be chuncked with this size. Defualt value is 1MB.
    */
   private int chunkSize;
@@ -553,4 +558,29 @@ public class Options {
     this.sstMaxLevels = sstMaxLevels;
   }
 
+  /**
+   * @return the vlogPath
+   */
+  public String getVlogPath() {
+    if (vlogPath == null) {
+      return path;
+    }
+    return vlogPath;
+  }
+
+  /**
+   * @param vlogPath the vlogPath to set
+   */
+  public void setVlogPath(String vlogPath) {
+    this.vlogPath = vlogPath;
+  }
+
+  /**
+   * @param vlogPath the vlogPath to set
+   * @return 
+   */
+  public Options withVlogPath(String vlogPath) {
+    this.vlogPath = vlogPath;
+    return this;
+  }
 }

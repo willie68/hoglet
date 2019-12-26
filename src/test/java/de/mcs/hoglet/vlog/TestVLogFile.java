@@ -49,6 +49,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.ByteArrayUtils;
@@ -385,6 +386,52 @@ class TestVLogFile {
         testFileBin(vLogFile, buffer, id, infos.get(id));
       }
     }
+    System.out.println();
+  }
+
+  @Order(6)
+  @Test
+  public void testDifferentVlogPath() throws IOException, InterruptedException {
+    System.out.println("testing different vlog file path");
+    int fileIndex = 15;
+    deleteLogFile(fileIndex);
+
+    List<byte[]> descs = new ArrayList<>();
+
+    Map<byte[], VLogEntryInfo> infos = new HashMap<>();
+    VLogEntryInfo info = null;
+
+    File vlogFolder = new File(filePath, "vlog");
+    if (!vlogFolder.exists()) {
+      vlogFolder.mkdirs();
+    }
+
+    Options myOptions = Options.defaultOptions().withPath(filePath.getAbsolutePath())
+        .withVlogPath(vlogFolder.getAbsolutePath());
+
+    File vlogFile = new File(vlogFolder, DatabaseUtils.getVLogFileName(fileIndex));
+    assertFalse(vlogFile.exists());
+
+    try (VLogFile vLogFile = new VLogFile(myOptions, fileIndex)) {
+      myVLogFile = vLogFile.getFile();
+      byte[] buffer = new byte[1024 * 1024];
+      new Random().nextBytes(buffer);
+      for (int i = 1; i <= 100; i++) {
+        byte[] id = ids.getByteID();
+        Monitor m = MeasureFactory.start("write");
+        try {
+          descs.add(id);
+          info = vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
+        } finally {
+          m.stop();
+        }
+        infos.put(id, info);
+      }
+      for (byte[] id : descs) {
+        testFileBin(vLogFile, buffer, id, infos.get(id));
+      }
+    }
+    assertTrue(vlogFile.exists());
   }
 
   @Test

@@ -32,8 +32,8 @@ import de.mcs.hoglet.Options;
  */
 public class DatabaseUtils {
 
-  private static final String VLOG_FILENAME_FORMAT = "vlog_%04d.vlog";
-  private static final String VLOG_FILENAME_REGEX_NUMBER = "vlog_(.*)\\.vlog";
+  private static final String VLOG_FILENAME_FORMAT = "%08d.vlog";
+  private static final String VLOG_FILENAME_REGEX_NUMBER = "(.*)\\.vlog";
   private static final String SST_FILENAME_REGEX_NUMBER = "sst_%02d_(.*)\\.sst";
   private static final String SST_FILENAME_FORMAT = "sst_%02d_%02d.sst";
 

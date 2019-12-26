@@ -69,7 +69,7 @@ public class VLogFile implements Closeable {
   public VLogFile(Options options, int number) throws IOException {
     this();
     this.options = options;
-    this.vLogFile = getFilePathName(new File(options.getPath()), number);
+    this.vLogFile = getFilePathName(new File(options.getVlogPath()), number);
     init();
   }
 
