@@ -237,12 +237,17 @@ public class VLogFile implements Closeable {
   }
 
   public Iterator<VLogEntryDescription> iterator() throws IOException {
+    return iterator(0);
+  }
+
+  public Iterator<VLogEntryDescription> iterator(long startPosition) throws IOException {
     List<VLogEntryDescription> entryInfos = new ArrayList<>();
 
     try (RandomAccessInputStream in = new RandomAccessInputStream(vLogFile)) {
+      in.position(startPosition);
+      long position = startPosition;
       try (BufferedInputStream input = new BufferedInputStream(in)) {
         boolean markerFound = false;
-        long position = 0;
         while (input.available() > 0) {
           markerFound = true;
           long start = position;

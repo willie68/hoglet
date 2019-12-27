@@ -26,6 +26,26 @@ import de.mcs.utils.GsonUtils;
  *
  */
 public class VLogEntryInfo {
+
+  /**
+   * creating a VLogEntryInfo from json string
+   * 
+   * @param json
+   *          the json representation
+   * @return VLogEntryInfo
+   */
+  public static VLogEntryInfo fromJson(String json) {
+    return GsonUtils.getJsonMapper().fromJson(json, VLogEntryInfo.class);
+  }
+
+  /**
+   * public creation of new VLogEntryInfo
+   * @return new empty VLogEntryInfo
+   */
+  public static VLogEntryInfo newVLogEntryInfo() {
+    return new VLogEntryInfo();
+  }
+
   long start;
   long startBinary;
   long end;
@@ -76,9 +96,8 @@ public class VLogEntryInfo {
    *          the start to set
    * @return
    */
-  public VLogEntryInfo setStart(long start) {
+  public void setStart(long start) {
     this.start = start;
-    return this;
   }
 
   /**
@@ -86,9 +105,8 @@ public class VLogEntryInfo {
    *          the startBinary to set
    * @return
    */
-  public VLogEntryInfo setStartBinary(long startBinary) {
+  public void setStartBinary(long startBinary) {
     this.startBinary = startBinary;
-    return this;
   }
 
   /**
@@ -96,9 +114,8 @@ public class VLogEntryInfo {
    *          the end to set
    * @return
    */
-  public VLogEntryInfo setEnd(long end) {
+  public void setEnd(long end) {
     this.end = end;
-    return this;
   }
 
   /**
@@ -106,9 +123,8 @@ public class VLogEntryInfo {
    *          the hash to set
    * @return
    */
-  public VLogEntryInfo setHash(byte[] hash) {
+  public void setHash(byte[] hash) {
     this.hash = hash;
-    return this;
   }
 
   /**
@@ -136,13 +152,52 @@ public class VLogEntryInfo {
   }
 
   /**
-   * creating a VLogEntryInfo from json string
-   * 
-   * @param json
-   *          the json representation
-   * @return VLogEntryInfo
+   * @param start
+   *          the start to set
+   * @return
    */
-  public static VLogEntryInfo fromJson(String json) {
-    return GsonUtils.getJsonMapper().fromJson(json, VLogEntryInfo.class);
+  public VLogEntryInfo withStart(long start) {
+    this.setStart(start);
+    return this;
   }
+
+  /**
+   * @param startBinary
+   *          the startBinary to set
+   * @return
+   */
+  public VLogEntryInfo withStartBinary(long startBinary) {
+    this.setStartBinary(startBinary);
+    return this;
+  }
+
+  /**
+   * @param end
+   *          the end to set
+   * @return
+   */
+  public VLogEntryInfo withEnd(long end) {
+    this.setEnd(end);
+    return this;
+  }
+
+  /**
+   * @param hash
+   *          the hash to set
+   * @return
+   */
+  public VLogEntryInfo withHash(byte[] hash) {
+    this.setHash(hash);
+    return this;
+  }
+
+  /**
+   * @param vLogName
+   *          the vLogName to set
+   */
+  public VLogEntryInfo withVLogName(String vLogName) {
+    this.setvLogName(vLogName);
+    return this;
+  }
+
 }

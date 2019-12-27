@@ -24,6 +24,8 @@ package de.mcs.hoglet.utils;
 import java.io.File;
 import java.io.FilenameFilter;
 
+import com.google.common.io.Files;
+
 import de.mcs.hoglet.Options;
 
 /**
@@ -43,6 +45,11 @@ public class DatabaseUtils {
 
   public static String getVLogFileName(int number) {
     return String.format(VLOG_FILENAME_FORMAT, number);
+  }
+
+  public static int getVLogFileNumber(String name) {
+    String numberStr = Files.getNameWithoutExtension(name);
+    return Integer.parseInt(numberStr);
   }
 
   public static File getVLogFilePath(File folder, int number) {
@@ -89,7 +96,7 @@ public class DatabaseUtils {
   }
 
   public File[] getVLogFiles() {
-    File folder = new File(options.getPath());
+    File folder = new File(options.getVlogPath());
     File[] listFiles = folder.listFiles(new FilenameFilter() {
 
       @Override

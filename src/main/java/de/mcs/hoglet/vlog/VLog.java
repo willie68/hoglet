@@ -111,4 +111,7 @@ public class VLog implements Closeable {
     return vLogFile.iterator();
   }
 
+  public Iterator<VLogEntryDescription> getIterator(long startPosition) throws IOException {
+    return vLogFile.iterator(startPosition);
+  }
 }

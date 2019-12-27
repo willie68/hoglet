@@ -27,7 +27,11 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -46,6 +50,7 @@ import de.mcs.hoglet.sst.SSTableReaderFactory;
 import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.hoglet.vlog.VLog;
+import de.mcs.hoglet.vlog.VLogEntryDescription;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.hoglet.vlog.VLogList;
 import de.mcs.utils.GsonUtils;
@@ -130,9 +135,68 @@ public class HogletDB implements Closeable {
     replayVlog();
   }
 
-  private void replayVlog() {
+  private void replayVlog() throws HogletDBException {
     // TODO get the newest SST file, there from get the last VLogInfoEntry
+    SSTableReader reader = getNewestSST();
     // TODO this will be the starting point for the replay.
+    VLogEntryInfo lastVLogEntry = reader.getLastVLogEntry();
+    startReplay(lastVLogEntry);
+  }
+
+  private void startReplay(VLogEntryInfo lastVLogEntry) throws HogletDBException {
+    int startVLogNumber = 0;
+    long position = 0;
+    if (lastVLogEntry != null) {
+      startVLogNumber = DatabaseUtils.getVLogFileNumber(lastVLogEntry.getvLogName());
+      position = lastVLogEntry.getStart();
+    }
+    List<File> vlogList = Arrays.asList(databaseUtils.getVLogFiles());
+    vlogList.sort(new Comparator<File>() {
+
+      @Override
+      public int compare(File o1, File o2) {
+        return o1.getName().compareTo(o2.getName());
+      }
+    });
+
+    boolean first = true;
+    for (int i = 0; i < vlogList.size(); i++) {
+      File vlogFile = vlogList.get(i);
+      int number = DatabaseUtils.getVLogFileNumber(vlogFile.getName());
+      if (number >= startVLogNumber) {
+        try (VLog vLog = vLogList.getVLog(vlogFile.getName())) {
+          for (Iterator<VLogEntryDescription> iterator = vLog.getIterator(position); iterator.hasNext();) {
+            VLogEntryDescription entry = iterator.next();
+            // first off all entries should be ignored, because the given Entry
+            // is the last Entry which is saved to the file system.
+            if (!first) {
+              VLogEntryInfo info = VLogEntryInfo.newVLogEntryInfo().withStart(entry.getStart())
+                  .withHash(entry.getHash()).withStartBinary(entry.getStartBinary()).withEnd(entry.getEnd())
+                  .withVLogName(entry.getContainerName());
+              memoryTable.add(entry.getCollection(), entry.getKey(), Operation.ADD,
+                  info.asJson().getBytes(StandardCharsets.UTF_8));
+            } else {
+              first = false;
+            }
+          }
+          position = 0;
+        } catch (IOException e) {
+          throw new HogletDBException(e);
+        }
+      }
+    }
+  }
+
+  private SSTableReader getNewestSST() {
+    for (int level = 0; level < tableMatrix.length; level++) {
+      for (int number = tableMatrix[level].length - 1; number == 0; number++) {
+        SSTableReader ssTableReader = tableMatrix[level][number];
+        if (ssTableReader != null) {
+          return ssTableReader;
+        }
+      }
+    }
+    return null;
   }
 
   private void initEventbus() {
