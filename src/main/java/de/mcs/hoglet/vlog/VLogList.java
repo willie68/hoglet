@@ -30,7 +30,7 @@ import de.mcs.utils.caches.ObjectCache;
 import de.mcs.utils.caches.ObjectCache.ObjectListener;
 import de.mcs.utils.logging.Logger;
 
-public class VLogList {
+public class VLogList implements AutoCloseable {
 
   private Logger log = Logger.getLogger(this.getClass());
 
@@ -65,6 +65,9 @@ public class VLogList {
   }
 
   public VLog getNextAvailableVLog() throws IOException {
+    if (isReadonly()) {
+      return null;
+    }
     writeLock.lock();
     try {
       VLog vLog = getAvailableVLogForWriting();

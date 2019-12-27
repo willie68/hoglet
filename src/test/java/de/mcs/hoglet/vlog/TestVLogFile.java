@@ -65,8 +65,8 @@ import de.mcs.utils.SystemTestFolderHelper;
 class TestVLogFile {
 
   private static final int MAX_DOCS = 1000;
-  private static final String FAMILY = "EASY";
-  private static final String FAMILY_TOO_LONG = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456";
+  private static final String COLLECTION = "MCS";
+  private static final String COLLECTION_TOO_LONG = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456";
   private static final boolean DELETE_BEFORE_TEST = true;
   private static File filePath;
   private static QueuedIDGenerator ids;
@@ -120,7 +120,7 @@ class TestVLogFile {
 
       Monitor m = MeasureFactory.start("write");
       try {
-        info = vLogFile.put(FAMILY, byteID, 1, buffer, Operation.ADD);
+        info = vLogFile.put(COLLECTION, byteID, 1, buffer, Operation.ADD);
       } finally {
         m.stop();
       }
@@ -130,7 +130,7 @@ class TestVLogFile {
       byteID = ids.getByteID();
       m = MeasureFactory.start("write");
       try {
-        info = vLogFile.put(FAMILY, byteID, 1, buffer, Operation.ADD);
+        info = vLogFile.put(COLLECTION, byteID, 1, buffer, Operation.ADD);
       } finally {
         m.stop();
       }
@@ -158,7 +158,7 @@ class TestVLogFile {
         descs.add(id);
         Monitor m = MeasureFactory.start("write");
         try {
-          info = vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
+          info = vLogFile.put(COLLECTION, id, 1, buffer, Operation.ADD);
         } finally {
           m.stop();
         }
@@ -274,7 +274,7 @@ class TestVLogFile {
     assertEquals(buffer.length, descriptor.length);
     assertEquals(ByteArrayUtils.bytesAsHexString(info.hash), ByteArrayUtils.bytesAsHexString(descriptor.hash));
     assertEquals(ByteArrayUtils.bytesAsHexString(byteId), ByteArrayUtils.bytesAsHexString(descriptor.key));
-    assertEquals(FAMILY, new String(descriptor.collectionBytes, StandardCharsets.UTF_8));
+    assertEquals(COLLECTION, new String(descriptor.collectionBytes, StandardCharsets.UTF_8));
     assertEquals(1, descriptor.chunkNumber);
 
     VLogEntryDescription description;
@@ -290,7 +290,7 @@ class TestVLogFile {
     assertEquals(buffer.length, descriptor.getLength());
     assertEquals(ByteArrayUtils.bytesAsHexString(info.hash), ByteArrayUtils.bytesAsHexString(descriptor.getHash()));
     assertEquals(ByteArrayUtils.bytesAsHexString(byteId), ByteArrayUtils.bytesAsHexString(descriptor.getKey()));
-    assertEquals(FAMILY, new String(descriptor.collectionBytes, StandardCharsets.UTF_8));
+    assertEquals(COLLECTION, new String(descriptor.collectionBytes, StandardCharsets.UTF_8));
     assertEquals(1, descriptor.getChunkNumber());
   }
 
@@ -320,11 +320,11 @@ class TestVLogFile {
           if (i >= 129) {
             System.out.println("creating " + i + " blob");
             Assertions.assertThrows(HogletDBException.class, () -> {
-              vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
+              vLogFile.put(COLLECTION, id, 1, buffer, Operation.ADD);
             });
           } else {
             descs.add(id);
-            info = vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
+            info = vLogFile.put(COLLECTION, id, 1, buffer, Operation.ADD);
           }
         } finally {
           m.stop();
@@ -365,11 +365,11 @@ class TestVLogFile {
         try {
           if (i == 1000) {
             Assertions.assertThrows(HogletDBException.class, () -> {
-              vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
+              vLogFile.put(COLLECTION, id, 1, buffer, Operation.ADD);
             });
           } else {
             descs.add(id);
-            info = vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
+            info = vLogFile.put(COLLECTION, id, 1, buffer, Operation.ADD);
           }
         } finally {
           m.stop();
@@ -421,7 +421,7 @@ class TestVLogFile {
         Monitor m = MeasureFactory.start("write");
         try {
           descs.add(id);
-          info = vLogFile.put(FAMILY, id, 1, buffer, Operation.ADD);
+          info = vLogFile.put(COLLECTION, id, 1, buffer, Operation.ADD);
         } finally {
           m.stop();
         }
@@ -452,11 +452,11 @@ class TestVLogFile {
       // new Random().nextBytes(buffer);
       byte[] byteID = ids.getByteID();
       Assertions.assertThrows(HogletDBException.class, () -> {
-        vLogFile.put(FAMILY_TOO_LONG, byteID, 1, buffer, Operation.ADD);
+        vLogFile.put(COLLECTION_TOO_LONG, byteID, 1, buffer, Operation.ADD);
       });
 
       Assertions.assertThrows(HogletDBException.class, () -> {
-        vLogFile.put(FAMILY, buffer, 1, buffer, Operation.ADD);
+        vLogFile.put(COLLECTION, buffer, 1, buffer, Operation.ADD);
       });
     }
 
