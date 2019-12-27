@@ -224,7 +224,7 @@ class TestVLogFile {
         assertEquals(vLogEntryInfo.startBinary, type.startBinary);
         assertEquals(1, type.chunkNumber);
         assertEquals(vLogFile.getName(), type.containerName);
-        assertEquals("EASY", type.collection);
+        assertEquals(COLLECTION, type.collection);
         assertEquals(vLogEntryInfo.getBinarySize(), type.length);
       }
       assertEquals(MAX_DOCS, list.size());

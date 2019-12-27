@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantLock;
 
 import de.mcs.hoglet.HogletDBException;
@@ -96,11 +97,23 @@ public class VLogList implements AutoCloseable {
       return null;
     }
     synchronized (vLogMap) {
-      for (VLog vLog : vLogMap.values()) {
+      List<String> toRemove = new ArrayList<>();
+      for (Entry<String, VLog> entry : vLogMap.entrySet()) {
+        VLog vLog = entry.getValue();
         if (vLog.isAvailbleForWriting()) {
           return vLog;
+        } else {
+          toRemove.add(entry.getKey());
         }
       }
+      toRemove.forEach(k -> {
+        VLog vLog = vLogMap.remove(k);
+        try {
+          vLog.closeFile();
+        } catch (IOException e) {
+          log.error(e);
+        }
+      });
     }
     return null;
   }
@@ -141,10 +154,15 @@ public class VLogList implements AutoCloseable {
     return list;
   }
 
-  public void remove(VLog vLog) {
+  public void remove(VLog vLog) throws HogletDBException {
     synchronized (vLogMap) {
       if (vLogMap.containsValue(vLog)) {
         vLogMap.remove(vLog.getName());
+        try {
+          vLog.closeFile();
+        } catch (IOException e) {
+          throw new HogletDBException(e);
+        }
       }
     }
   }

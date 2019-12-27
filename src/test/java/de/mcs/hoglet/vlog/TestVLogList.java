@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.QueuedIDGenerator;
@@ -25,6 +26,7 @@ class TestVLogList {
   private static QueuedIDGenerator ids;
   private static File filePath;
   private static Options options;
+  private boolean created = false;
 
   /**
    * @throws java.lang.Exception
@@ -46,8 +48,8 @@ class TestVLogList {
     System.out.println(MeasureFactory.asString());
   }
 
-  @Test
   @Order(1)
+  @Test
   void testEmpty() {
     try (VLogList vLogList = new VLogList(options)) {
       List<VLog> list = vLogList.getList();
@@ -56,8 +58,8 @@ class TestVLogList {
     }
   }
 
+  @Order(2)
   @Test
-  @Order(1)
   void testReadOnlyEmpty() {
     try (VLogList vLogList = new VLogList(options)) {
       assertFalse(vLogList.isReadonly());
@@ -66,8 +68,8 @@ class TestVLogList {
     }
   }
 
+  @Order(3)
   @Test
-  @Order(2)
   void testReadOnlyVLog() throws IOException {
     try (VLogList vLogList = new VLogList(options)) {
       assertFalse(vLogList.isReadonly());
@@ -81,54 +83,71 @@ class TestVLogList {
     }
   }
 
+  @Order(4)
   @Test
-  @Order(3)
   void testCreateNewVLogFile() throws IOException {
-    try (VLogList vLogList = new VLogList(options)) {
-      assertFalse(vLogList.isReadonly());
-      String vlogName = null;
-      try (VLog vLog = vLogList.getNextAvailableVLog()) {
-        assertNotNull(vLog);
-        vlogName = vLog.getName();
-        assertTrue(vLog.isAvailbleForWriting());
-        byte[] buffer = new byte[128];
-        for (int i = 0; i < buffer.length; i++) {
-          if ((i % 10) == 0) {
-            buffer[i] = '#';
-          } else {
-            buffer[i] = (byte) ('0' + (i % 10));
+    if (!created) {
+      created = true;
+      try (VLogList vLogList = new VLogList(options)) {
+        assertFalse(vLogList.isReadonly());
+        String vlogName = null;
+        try (VLog vLog = vLogList.getNextAvailableVLog()) {
+          assertNotNull(vLog);
+          vlogName = vLog.getName();
+          assertTrue(vLog.isAvailbleForWriting());
+          byte[] buffer = new byte[128];
+          for (int i = 0; i < buffer.length; i++) {
+            if ((i % 10) == 0) {
+              buffer[i] = '#';
+            } else {
+              buffer[i] = (byte) ('0' + (i % 10));
+            }
+          }
+          // new Random().nextBytes(buffer);
+          byte[] byteID = ids.getByteID();
+          VLogEntryInfo info;
+
+          Monitor m = MeasureFactory.start("write");
+          try {
+            info = vLog.put(COLLECTION, byteID, 1, buffer, Operation.ADD);
+          } finally {
+            m.stop();
           }
         }
-        // new Random().nextBytes(buffer);
-        byte[] byteID = ids.getByteID();
-        VLogEntryInfo info;
+        try (VLog vLog = vLogList.getNextAvailableVLog()) {
+          assertNotNull(vLog);
+          assertEquals(vlogName, vLog.getName());
+          assertTrue(vLog.isAvailbleForWriting());
+        }
 
-        Monitor m = MeasureFactory.start("write");
-        try {
-          info = vLog.put(COLLECTION, byteID, 1, buffer, Operation.ADD);
-        } finally {
-          m.stop();
+        List<VLog> list = vLogList.getList();
+        assertNotNull(list);
+        assertFalse(list.isEmpty());
+        assertEquals(1, list.size());
+        assertEquals(vlogName, list.get(0).getName());
+        assertTrue(list.get(0).isAvailbleForWriting());
+
+        {
+          VLog vLog = vLogList.getVLog(vlogName);
+          assertEquals(vlogName, vLog.getName());
+          assertTrue(vLog.isAvailbleForWriting());
         }
       }
-      try (VLog vLog = vLogList.getNextAvailableVLog()) {
-        assertNotNull(vLog);
-        assertEquals(vlogName, vLog.getName());
-        assertTrue(vLog.isAvailbleForWriting());
+    }
+  }
+
+  @Order(5)
+  @Test
+  void testReloadVLogFile() throws IOException {
+    if (!created) {
+      testCreateNewVLogFile();
+    }
+    try (VLogList vLogList = new VLogList(options)) {
+      assertFalse(vLogList.isReadonly());
+      String vLogFileName = DatabaseUtils.getVLogFileName(1);
+      try (VLog vLog = vLogList.getVLog(vLogFileName)) {
+        assertFalse(vLog.isAvailbleForWriting());
       }
-
-      List<VLog> list = vLogList.getList();
-      assertNotNull(list);
-      assertFalse(list.isEmpty());
-      assertEquals(1, list.size());
-      assertEquals(vlogName, list.get(0).getName());
-      assertTrue(list.get(0).isAvailbleForWriting());
-
-      {
-        VLog vLog = vLogList.getVLog(vlogName);
-        assertEquals(vlogName, vLog.getName());
-        assertTrue(vLog.isAvailbleForWriting());
-      }
-
     }
   }
 }

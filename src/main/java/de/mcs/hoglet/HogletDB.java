@@ -138,9 +138,13 @@ public class HogletDB implements Closeable {
   private void replayVlog() throws HogletDBException {
     // TODO get the newest SST file, there from get the last VLogInfoEntry
     SSTableReader reader = getNewestSST();
-    // TODO this will be the starting point for the replay.
-    VLogEntryInfo lastVLogEntry = reader.getLastVLogEntry();
-    startReplay(lastVLogEntry);
+    if (reader != null) {
+      // TODO this will be the starting point for the replay.
+      VLogEntryInfo lastVLogEntry = reader.getLastVLogEntry();
+      if (lastVLogEntry != null) {
+        startReplay(lastVLogEntry);
+      }
+    }
   }
 
   private void startReplay(VLogEntryInfo lastVLogEntry) throws HogletDBException {
@@ -355,14 +359,14 @@ public class HogletDB implements Closeable {
     if (isReadonly()) {
       throw new HogletDBException("hoglet is in readonly mode");
     }
-    checkMemory();
     try {
       VLog vLog = vLogList.getNextAvailableVLog();
-      log.debug("putting into vlog file %s", vLog.getName());
+      // log.debug("putting into vlog file %s", vLog.getName());
       VLogEntryInfo info = vLog.put(collection, key, 0, value, Operation.ADD);
       if (memoryTable.isAvailbleForWriting()) {
         return memoryTable.add(collection, key, Operation.ADD, info.asJson().getBytes(StandardCharsets.UTF_8));
       }
+
       int count = 0;
       while ((immutableTable != null) && (count < 1000)) {
         // wait for writing of table...
@@ -385,21 +389,6 @@ public class HogletDB implements Closeable {
     } catch (IOException e) {
       throw new HogletDBException(e);
     }
-  }
-
-  private void checkMemory() {
-    if (memoryTable.isAvailbleForWriting()) {
-      return;
-    }
-    while (immutableTable != null) {
-      try {
-        Thread.sleep(10);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-    }
-    immutableTable = memoryTable;
-    memoryTable = getNewMemoryTable();
   }
 
   private byte[] removeKey(String collection, byte[] key) throws HogletDBException {
