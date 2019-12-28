@@ -189,4 +189,11 @@ public class MemoryTableWriter implements Closeable {
     this.lastVLogEntry = lastVLogEntry;
   }
 
+  /**
+   * @return the sstFile
+   */
+  public File getSstFile() {
+    return sstFile;
+  }
+
 }

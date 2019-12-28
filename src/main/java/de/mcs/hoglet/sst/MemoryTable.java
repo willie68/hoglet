@@ -3,7 +3,7 @@ package de.mcs.hoglet.sst;
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
 
-public interface MemoryTable {
+public interface MemoryTable extends Iterable<Entry> {
 
   boolean containsKey(String collection, byte[] key);
 
@@ -18,5 +18,7 @@ public interface MemoryTable {
   boolean isAvailbleForWriting();
 
   void setLastVLogEntry(VLogEntryInfo info);
+
+  VLogEntryInfo getLastVLogEntry();
 
 }

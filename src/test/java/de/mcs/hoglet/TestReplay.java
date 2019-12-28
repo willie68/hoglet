@@ -64,6 +64,8 @@ class TestReplay {
         byte[] storedValue = hogletDB.get(key);
         assertTrue(Arrays.equals(value, storedValue));
       }
+
+      System.out.println("ready, waiting for new SST file");
     }
   }
 
