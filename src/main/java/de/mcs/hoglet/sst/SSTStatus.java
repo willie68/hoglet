@@ -24,6 +24,8 @@ package de.mcs.hoglet.sst;
 import java.util.Date;
 
 import de.mcs.hoglet.vlog.VLogEntryInfo;
+import de.mcs.utils.ByteArrayUtils;
+import de.mcs.utils.GsonUtils;
 
 /**
  * This class contains the status of a sst table file
@@ -32,16 +34,22 @@ import de.mcs.hoglet.vlog.VLogEntryInfo;
  *
  */
 public class SSTStatus {
-  private byte[] bloomfilter;
+
+  private String bloomfilter;
   private long chunkCount;
-  private Date createdAt;
+  private long createdAt;
   private VLogEntryInfo lastVLogEntry;
 
   /**
    * @return the bloomfilter
    */
   public byte[] getBloomfilter() {
-    return bloomfilter;
+    try {
+      return ByteArrayUtils.decodeHex(bloomfilter);
+    } catch (Exception e) {
+      // DONE should never occure
+    }
+    return null;
   }
 
   /**
@@ -49,7 +57,7 @@ public class SSTStatus {
    *          the bloomfilter to set
    */
   public void setBloomfilter(byte[] bloomfilter) {
-    this.bloomfilter = bloomfilter;
+    this.bloomfilter = ByteArrayUtils.bytesAsHexString(bloomfilter);
   }
 
   /**
@@ -58,7 +66,7 @@ public class SSTStatus {
    * @return
    */
   public SSTStatus withBloomfilter(byte[] bloomfilter) {
-    this.bloomfilter = bloomfilter;
+    setBloomfilter(bloomfilter);
     return this;
   }
 
@@ -91,7 +99,7 @@ public class SSTStatus {
    * @return the createdAt
    */
   public Date getCreatedAt() {
-    return createdAt;
+    return new Date(createdAt);
   }
 
   /**
@@ -99,7 +107,7 @@ public class SSTStatus {
    *          the createdAt to set
    */
   public void setCreatedAt(Date createdAt) {
-    this.createdAt = createdAt;
+    this.createdAt = createdAt.getTime();
   }
 
   /**
@@ -108,7 +116,7 @@ public class SSTStatus {
    * @return
    */
   public SSTStatus withCreatedAt(Date createdAt) {
-    this.createdAt = createdAt;
+    this.createdAt = createdAt.getTime();
     return this;
   }
 
@@ -137,4 +145,11 @@ public class SSTStatus {
     return this;
   }
 
+  public String toJson() {
+    return GsonUtils.getJsonMapper().toJson(this);
+  }
+
+  public static SSTStatus fromJson(String json) {
+    return GsonUtils.getJsonMapper().fromJson(json, SSTStatus.class);
+  }
 }

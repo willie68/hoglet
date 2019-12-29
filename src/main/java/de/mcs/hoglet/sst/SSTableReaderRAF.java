@@ -24,7 +24,6 @@ import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
-import de.mcs.utils.GsonUtils;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -132,8 +131,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     fileChannel.read(bb);
     bb.rewind();
     CharBuffer json = StandardCharsets.UTF_8.decode(bb);
-    String jsonString = json.toString();
-    sstStatus = GsonUtils.getJsonMapper().fromJson(jsonString, SSTStatus.class);
+    sstStatus = SSTStatus.fromJson(json.toString());
     chunkCount = sstStatus.getChunkCount();
 
     MapKeyFunnel funnel = new MapKeyFunnel();

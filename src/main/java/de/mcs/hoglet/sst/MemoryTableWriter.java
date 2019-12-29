@@ -36,7 +36,6 @@ import com.google.common.hash.BloomFilter;
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
-import de.mcs.utils.GsonUtils;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -160,8 +159,7 @@ public class MemoryTableWriter implements Closeable {
     bloomfilter.writeTo(out);
     SSTStatus sstStatus = new SSTStatus().withBloomfilter(out.toByteArray()).withChunkCount(chunkCount)
         .withCreatedAt(new Date()).withLastVLogEntry(lastVLogEntry);
-    String json = GsonUtils.getJsonMapper().toJson(sstStatus);
-    fileChannel.write(StandardCharsets.UTF_8.encode(json));
+    fileChannel.write(StandardCharsets.UTF_8.encode(sstStatus.toJson()));
     ByteBuffer bb = ByteBuffer.allocate(128);
     bb.putLong(position);
     bb.flip();
