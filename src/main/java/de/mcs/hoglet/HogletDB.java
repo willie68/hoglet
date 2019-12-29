@@ -33,7 +33,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang3.StringUtils;
@@ -50,7 +52,6 @@ import de.mcs.hoglet.sst.SSTableManager;
 import de.mcs.hoglet.sst.SSTableReader;
 import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.hoglet.utils.DatabaseUtils;
-import de.mcs.hoglet.utils.SSTUtils;
 import de.mcs.hoglet.vlog.VLog;
 import de.mcs.hoglet.vlog.VLogEntryDescription;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
@@ -83,6 +84,7 @@ public class HogletDB implements Closeable {
   private DatabaseUtils databaseUtils;
   private EventBus eventBus;
   private SSTableManager ssTableManager;
+  private ExecutorService eventBusExecutor;
 
   /**
    * create a new instance of the hoglet key value store with specifig options.
@@ -198,7 +200,8 @@ public class HogletDB implements Closeable {
   }
 
   private void initEventbus() {
-    eventBus = new AsyncEventBus(Executors.newSingleThreadExecutor());
+    eventBusExecutor = Executors.newSingleThreadExecutor();
+    eventBus = new AsyncEventBus(eventBusExecutor);
     WriteImmutableTableEventListener writeImmutableTableEvent = new WriteImmutableTableEventListener(this);
     eventBus.register(writeImmutableTableEvent);
   }
@@ -312,7 +315,30 @@ public class HogletDB implements Closeable {
   }
 
   private boolean containsKey(String collection, byte[] key) {
-    return memoryTable.containsKey(collection, key);
+    if (memoryTable.containsKey(collection, key)) {
+      return true;
+    }
+    immutableTableLock.lock();
+    try {
+      if ((immutableTable != null) && immutableTable.containsKey(collection, key)) {
+        return true;
+      }
+    } finally {
+      immutableTableLock.unlock();
+    }
+
+    for (ListIterator<SSTableReader> iterator = ssTableManager.iteratorInCreationOrder(); iterator.hasNext();) {
+      SSTableReader ssTableReader = iterator.next();
+      MapKey mapkey = MapKey.buildPrefixedKey(collection, key);
+      try {
+        if (ssTableReader.contains(mapkey)) {
+          return true;
+        }
+      } catch (IOException | SSTException e) {
+        log.error("Error in SSTable", e);
+      }
+    }
+    return false;
   }
 
   private byte[] getKey(String collection, byte[] key) throws HogletDBException {
@@ -407,6 +433,12 @@ public class HogletDB implements Closeable {
 
   @Override
   public void close() throws HogletDBException {
+    eventBusExecutor.shutdown();
+    try {
+      eventBusExecutor.awaitTermination(10, TimeUnit.MINUTES);
+    } catch (InterruptedException e1) {
+      throw new HogletDBException("error shutting down eventbus", e1);
+    }
     if (channel != null) {
       try {
         channel.close();
@@ -446,9 +478,7 @@ public class HogletDB implements Closeable {
     if (immutableTable == null) {
       return;
     }
-    int number = ssTableManager.getNextTableNumber(0);
     try {
-      SSTUtils.writeMemoryTable(options, number, immutableTable);
       ssTableManager.writeMemoryTable(immutableTable);
     } catch (IOException | SSTException e) {
       log.error("error writing immutable table", e);

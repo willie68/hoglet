@@ -20,6 +20,8 @@ import de.mcs.utils.SystemTestFolderHelper;
 
 class TestReplay {
 
+  private static final int MEM_TABLE_MAX_KEYS = 1000;
+  private static final int VLOG_MAX_CHUNK_COUNT = 230;
   private HogletDB hogletDB;
   private static File dbFolder;
   private static QueuedIDGenerator ids;
@@ -40,19 +42,20 @@ class TestReplay {
 
   @Test
   public void testReplay() throws IOException {
+    List<byte[]> keys = new ArrayList<>();
+    byte[] value = new byte[128];
+    new Random().nextBytes(value);
+
     try (HogletDB hogletDB = new HogletDB(Options.defaultOptions().withPath(dbFolder.getAbsolutePath())
-        .withMemTableMaxKeys(1000).withVlogMaxChunkCount(100))) {
+        .withMemTableMaxKeys(MEM_TABLE_MAX_KEYS).withVlogMaxChunkCount(VLOG_MAX_CHUNK_COUNT))) {
 
       assertFalse(hogletDB.isReadonly());
 
-      List<byte[]> descs = new ArrayList<>();
       System.out.println("adding keys.");
-      byte[] value = new byte[1024];
+
       for (int i = 0; i < 1500; i++) {
         byte[] key = ids.getByteID();
-        descs.add(key);
-
-        new Random().nextBytes(value);
+        keys.add(key);
 
         assertFalse(hogletDB.contains(key));
         assertNull(hogletDB.get(key));
@@ -65,7 +68,29 @@ class TestReplay {
         assertTrue(Arrays.equals(value, storedValue));
       }
 
+      for (byte[] key : keys) {
+
+        assertTrue(hogletDB.contains(key));
+
+        byte[] storedValue = hogletDB.get(key);
+        // assertTrue(Arrays.equals(value, storedValue));
+      }
+
       System.out.println("ready, waiting for new SST file");
+    }
+
+    System.out.println("restarting hogletDB");
+    try (HogletDB hogletDB = new HogletDB(Options.defaultOptions().withPath(dbFolder.getAbsolutePath())
+        .withMemTableMaxKeys(MEM_TABLE_MAX_KEYS).withVlogMaxChunkCount(VLOG_MAX_CHUNK_COUNT))) {
+
+      assertFalse(hogletDB.isReadonly());
+      for (byte[] key : keys) {
+
+        assertTrue(hogletDB.contains(key));
+
+        byte[] storedValue = hogletDB.get(key);
+        // assertTrue(Arrays.equals(value, storedValue));
+      }
     }
   }
 

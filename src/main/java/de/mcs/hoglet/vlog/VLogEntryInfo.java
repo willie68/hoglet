@@ -83,8 +83,8 @@ public class VLogEntryInfo {
 
   @Override
   public String toString() {
-    return String.format("start: %d, bin: %d, end: %d, hash: %s", start, startBinary, end,
-        ByteArrayUtils.bytesAsHexString(hash));
+    return String.format("start: %d, bin: %d, end: %d, hash: %s, file: %s", start, startBinary, end,
+        ByteArrayUtils.bytesAsHexString(hash), vLogName);
   }
 
   public int getDescriptionSize() {

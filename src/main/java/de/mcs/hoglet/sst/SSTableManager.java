@@ -31,6 +31,7 @@ import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.hoglet.utils.SSTUtils;
+import de.mcs.utils.logging.Logger;
 
 /**
  * @author wklaa_000
@@ -51,6 +52,7 @@ public class SSTableManager {
     return tableManager;
   }
 
+  private Logger log = Logger.getLogger(this.getClass());
   private Options options;
   private SSTableReader[][] tableMatrix;
   private DatabaseUtils databaseUtils;
@@ -77,6 +79,7 @@ public class SSTableManager {
         }
       }
     }
+    log.info("init tables: \r\n%s", this.toString());
   }
 
   /**
@@ -108,7 +111,7 @@ public class SSTableManager {
    */
   public SSTableReader getNewestSST() {
     for (int level = 0; level < tableMatrix.length; level++) {
-      for (int number = tableMatrix[level].length - 1; number == 0; number++) {
+      for (int number = tableMatrix[level].length - 1; number >= 0; number--) {
         SSTableReader ssTableReader = tableMatrix[level][number];
         if (ssTableReader != null) {
           return ssTableReader;
@@ -173,16 +176,6 @@ public class SSTableManager {
   }
 
   /**
-   * adding a freshly created 
-   * @param i
-   * @param number
-   */
-  public void addSSTable(int i, int number) {
-    // TODO Auto-generated method stub
-
-  }
-
-  /**
    * writing out the memory table to the next level 0 sst file. If this is the 10's file, the compact event for level 0 will be thrown.
    * @param immutableTable the memeory table to write out
    * @throws IOException if something goes wrong on the file syytem
@@ -193,5 +186,21 @@ public class SSTableManager {
     File file = SSTUtils.writeMemoryTable(options, number, immutableTable);
     SSTableReader reader = SSTableReaderFactory.getReader(options, 0, number);
     tableMatrix[0][number] = reader;
+  }
+
+  public String toString() {
+    StringBuilder b = new StringBuilder();
+    for (int level = 0; level < tableMatrix.length; level++) {
+      for (int number = 0; number < tableMatrix[level].length; number++) {
+        SSTableReader ssTableReader = tableMatrix[level][number];
+        if (ssTableReader != null) {
+          b.append("X");
+        } else {
+          b.append("0");
+        }
+      }
+      b.append("\r\n");
+    }
+    return b.toString();
   }
 }
