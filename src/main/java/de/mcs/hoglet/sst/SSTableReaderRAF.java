@@ -80,6 +80,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   private ReentrantLock readLock;
   private DatabaseUtils databaseUtils;
   private SSTStatus sstStatus;
+  private long endOfSST;
 
   public SSTableReaderRAF(Options options, int level, int number) throws SSTException, IOException {
     this.options = options;
@@ -125,9 +126,9 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     fileChannel.read(bb);
     bb.rewind();
     long endStatus = raf.length() - 8;
-    long statusPosition = bb.getLong();
-    fileChannel.position(statusPosition);
-    bb = ByteBuffer.allocate((int) (endStatus - statusPosition));
+    endOfSST = bb.getLong();
+    fileChannel.position(endOfSST);
+    bb = ByteBuffer.allocate((int) (endStatus - endOfSST));
     fileChannel.read(bb);
     bb.rewind();
     CharBuffer json = StandardCharsets.UTF_8.decode(bb);
@@ -160,7 +161,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
       readLock.lock();
       try {
         fileChannel.position(startPosition);
-        while (fileChannel.position() < fileChannel.size()) {
+        while ((fileChannel.position() < fileChannel.size()) && (fileChannel.position() < endOfSST)) {
           long savePosition = fileChannel.position();
           Entry entry = read();
           int index = Math.round((count * CACHE_SIZE) / chunkCount);
@@ -255,7 +256,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
 
         m = MeasureFactory.start("SSTableReaderRAF#get.scan");
         try {
-          while (fileChannel.position() < fileChannel.size()) {
+          while ((fileChannel.position() < fileChannel.size()) && (fileChannel.position() < endOfSST)) {
             long savePosition = fileChannel.position();
             Entry entry = read();
             int index = Math.round((count * CACHE_SIZE) / chunkCount);

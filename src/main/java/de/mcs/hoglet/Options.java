@@ -55,7 +55,7 @@ public class Options {
     // @formatter:on
   }
 
-  public static Options fromYamlString(String yaml) {
+  public static Options fromYaml(String yaml) {
     return GsonUtils.getYamlMapper(Options.class).load(yaml);
   }
 
@@ -337,8 +337,11 @@ public class Options {
     return GsonUtils.getJsonMapper().toJson(this);
   }
 
-  public String toYamlString() {
+  public String toYaml() {
     StringWriter writer = new StringWriter();
+    writer.append("# Attention: don't mess with this configuration file.\r\n");
+    writer.append("# changes could lead into not working database.\r\n");
+    writer.append("# only do changes, if you're knowing what to do.\r\n");
     GsonUtils.getYamlMapper().dump(this, writer);
     return writer.toString();
   }

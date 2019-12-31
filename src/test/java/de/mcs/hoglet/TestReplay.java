@@ -84,9 +84,11 @@ class TestReplay {
         .withMemTableMaxKeys(MEM_TABLE_MAX_KEYS).withVlogMaxChunkCount(VLOG_MAX_CHUNK_COUNT))) {
 
       assertFalse(hogletDB.isReadonly());
+      int count = 0;
       for (byte[] key : keys) {
 
-        assertTrue(hogletDB.contains(key));
+        assertTrue(hogletDB.contains(key), "can't find key count " + count);
+        count++;
 
         byte[] storedValue = hogletDB.get(key);
         // assertTrue(Arrays.equals(value, storedValue));

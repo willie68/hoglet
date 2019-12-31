@@ -34,8 +34,8 @@ class TestOptions {
   @Test
   void test() {
     Options src = Options.defaultOptions().withPath("123456/123");
-    String yaml = src.toYamlString();
-    Options dest = Options.fromYamlString(yaml);
+    String yaml = src.toYaml();
+    Options dest = Options.fromYaml(yaml);
     assertEquals(src.getChunkSize(), dest.getChunkSize());
     assertEquals(src.getMemTableMaxKeys(), dest.getMemTableMaxKeys());
     assertEquals(src.getMemTableMaxSize(), dest.getMemTableMaxSize());

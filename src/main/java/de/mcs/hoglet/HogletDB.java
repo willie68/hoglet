@@ -26,6 +26,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -102,14 +103,11 @@ public class HogletDB implements Closeable {
     if (StringUtils.isEmpty(options.getPath())) {
       throw new HogletDBException("path should not be null or empty.");
     }
+    boolean newDB = true;
     // trying to check the path
     File dbFolder = new File(options.getPath());
     if (!dbFolder.exists()) {
       dbFolder.mkdirs();
-    }
-    File vlogFolder = new File(options.getVlogPath());
-    if (!vlogFolder.exists()) {
-      vlogFolder.mkdirs();
     }
     File lockFile = new File(dbFolder, "LOCK");
     if (!lockFile.exists()) {
@@ -119,6 +117,35 @@ public class HogletDB implements Closeable {
         throw new HogletDBException("can't lock folder.", e);
       }
     }
+
+    File optionFile = new File(dbFolder, "options.yml");
+    if (optionFile.exists()) {
+      newDB = false;
+      try {
+        String yaml = Files.readString(optionFile.toPath());
+        Options fromYaml = Options.fromYaml(yaml);
+        fromYaml.setPath(options.getPath());
+        options = fromYaml;
+      } catch (IOException e) {
+        throw new HogletDBException("error reading options.yml.", e);
+      }
+    } else {
+      try {
+        Files.writeString(optionFile.toPath(), options.toYaml(), StandardOpenOption.CREATE_NEW);
+      } catch (IOException e) {
+        throw new HogletDBException("error writing options.yml.", e);
+      }
+    }
+
+    File vlogFolder = new File(options.getVlogPath());
+    if (newDB && !vlogFolder.exists()) {
+      throw new HogletDBException("vlog folder doesn't exists for already created database.");
+    }
+
+    if (!vlogFolder.exists()) {
+      vlogFolder.mkdirs();
+    }
+
     try {
       channel = FileChannel.open(lockFile.toPath(), StandardOpenOption.WRITE, StandardOpenOption.CREATE);
       writeLock = channel.tryLock();
@@ -171,7 +198,7 @@ public class HogletDB implements Closeable {
       }
     });
 
-    boolean first = true;
+    boolean first = false;
     for (int i = 0; i < vlogList.size(); i++) {
       File vlogFile = vlogList.get(i);
       int number = DatabaseUtils.getVLogFileNumber(vlogFile.getName());

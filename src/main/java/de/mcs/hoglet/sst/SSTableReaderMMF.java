@@ -83,6 +83,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   ReentrantLock readLock;
   private DatabaseUtils databaseUtils;
   private SSTStatus sstStatus;
+  private long endOfSST;
 
   public SSTableReaderMMF(Options options, int level, int number) throws SSTException, IOException {
     this.options = options;
@@ -128,9 +129,9 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     fileChannel.read(bb);
     bb.rewind();
     long endStatus = raf.length() - 8;
-    long statusPosition = bb.getLong();
-    fileChannel.position(statusPosition);
-    bb = ByteBuffer.allocate((int) (endStatus - statusPosition));
+    endOfSST = bb.getLong();
+    fileChannel.position(endOfSST);
+    bb = ByteBuffer.allocate((int) (endStatus - endOfSST));
     fileChannel.read(bb);
     bb.rewind();
     CharBuffer json = StandardCharsets.UTF_8.decode(bb);
@@ -164,7 +165,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
       readLock.lock();
       try {
         mmfBuffer.position(startPosition);
-        while (mmfBuffer.position() < mmfBuffer.limit()) {
+        while ((mmfBuffer.position() < mmfBuffer.limit()) && (mmfBuffer.position() < endOfSST)) {
           int savePosition = mmfBuffer.position();
           Entry entry = read();
           int index = Math.round((count * CACHE_SIZE) / chunkCount);
@@ -186,7 +187,6 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
       }
     }
     return false;
-
   }
 
   private PositionEntry read(int position) throws IOException, SSTException {
@@ -255,7 +255,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
 
         m = MeasureFactory.start("SSTableReaderMMF#get.scan");
         try {
-          while (mmfBuffer.position() < mmfBuffer.limit()) {
+          while ((mmfBuffer.position() < mmfBuffer.limit()) && (mmfBuffer.position() < endOfSST)) {
             int savePosition = mmfBuffer.position();
             Entry entry = read();
             int index = Math.round((count * CACHE_SIZE) / chunkCount);
