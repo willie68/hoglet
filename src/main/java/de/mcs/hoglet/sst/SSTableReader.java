@@ -65,4 +65,10 @@ public interface SSTableReader extends Closeable {
    */
   VLogEntryInfo getLastVLogEntry();
 
+  /**
+   * 
+   * @return the name of the underlying table file.
+   */
+  String getTableName();
+
 }

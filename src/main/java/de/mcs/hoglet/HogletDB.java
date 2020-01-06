@@ -160,14 +160,15 @@ public class HogletDB implements Closeable {
     immutableTable = null;
     immutableTableLock = new ReentrantLock();
     databaseUtils = DatabaseUtils.newDatabaseUtils(options);
-    initSSTManager();
     initEventbus();
+
+    initSSTManager();
 
     replayVlog();
   }
 
   private void initSSTManager() throws HogletDBException {
-    ssTableManager = SSTableManager.newSSTableManager(options, databaseUtils);
+    ssTableManager = SSTableManager.newSSTableManager(options, databaseUtils).withEventBus(eventBus);
   }
 
   private void replayVlog() throws HogletDBException {
@@ -507,6 +508,7 @@ public class HogletDB implements Closeable {
     }
     try {
       ssTableManager.writeMemoryTable(immutableTable);
+      immutableTable = null;
     } catch (IOException | SSTException e) {
       log.error("error writing immutable table", e);
     }

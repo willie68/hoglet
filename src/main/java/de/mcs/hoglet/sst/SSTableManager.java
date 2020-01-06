@@ -27,8 +27,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 
+import com.google.common.eventbus.EventBus;
+
 import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.event.CompactLevelEventListener;
 import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.hoglet.utils.SSTUtils;
 import de.mcs.utils.logging.Logger;
@@ -56,6 +59,7 @@ public class SSTableManager {
   private Options options;
   private SSTableReader[][] tableMatrix;
   private DatabaseUtils databaseUtils;
+  private EventBus eventBus;
 
   private SSTableManager() {
   }
@@ -150,7 +154,7 @@ public class SSTableManager {
         return number;
       }
     }
-    return 0;
+    return -1;
   }
 
   /**
@@ -186,6 +190,9 @@ public class SSTableManager {
     File file = SSTUtils.writeMemoryTable(options, number, immutableTable);
     SSTableReader reader = SSTableReaderFactory.getReader(options, 0, number);
     tableMatrix[0][number] = reader;
+    if ((number + 1) >= options.getLvlTableCount()) {
+      getEventBus().post(new CompactLevelEventListener.CompactLevelEvent().withLevel(0));
+    }
   }
 
   public String toString() {
@@ -202,5 +209,69 @@ public class SSTableManager {
       b.append("\r\n");
     }
     return b.toString();
+  }
+
+  public SSTableManager withEventBus(EventBus eventBus) {
+    setEventBus(eventBus);
+    initEventBus();
+    return this;
+  }
+
+  private void initEventBus() {
+    CompactLevelEventListener CompactLevelEvent = new CompactLevelEventListener(this);
+    eventBus.register(CompactLevelEvent);
+  }
+
+  /**
+   * @return the eventBus
+   */
+  public EventBus getEventBus() {
+    return eventBus;
+  }
+
+  /**
+   * @param eventBus the eventBus to set
+   */
+  public void setEventBus(EventBus eventBus) {
+    this.eventBus = eventBus;
+  }
+
+  public void compactLevel(final int level) {
+    log.info("compacting level " + level);
+    final int nextLevel = level + 1;
+    int number = getNextTableNumber(nextLevel);
+    SSTCompacter compacter = SSTCompacter.newCompacter(options).withReadingLevel(level).withWritingNumber(number);
+    try {
+      List<String> tableNames = compacter.start();
+      SSTableReader reader = SSTableReaderFactory.getReader(options, nextLevel, number);
+      tableMatrix[nextLevel][number] = reader;
+
+      tableNames.forEach(n -> removeTable(level, n));
+
+      if ((number + 1) >= options.getLvlTableCount()) {
+        getEventBus().post(new CompactLevelEventListener.CompactLevelEvent().withLevel(level + 1));
+      }
+    } catch (IOException | SSTException e) {
+      log.error(String.format("error on compacting level %d", level), e);
+    }
+  }
+
+  private void removeTable(int level, String name) {
+    SSTableReader[] ssTableReaders = tableMatrix[level];
+    for (int i = 0; i < ssTableReaders.length; i++) {
+      SSTableReader ssTableReader = ssTableReaders[i];
+      if ((ssTableReader != null) && (name.equals(ssTableReader.getTableName()))) {
+        tableMatrix[level][i] = null;
+        try {
+          ssTableReader.close();
+          File file = new File(options.getPath(), name);
+          if (file.exists()) {
+            file.delete();
+          }
+        } catch (IOException e) {
+          log.error("error closing sstable", e);
+        }
+      }
+    }
   }
 }

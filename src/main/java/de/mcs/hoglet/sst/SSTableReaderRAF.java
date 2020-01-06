@@ -298,4 +298,9 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   public VLogEntryInfo getLastVLogEntry() {
     return sstStatus.getLastVLogEntry();
   }
+
+  @Override
+  public String getTableName() {
+    return filename;
+  }
 }

@@ -5,6 +5,7 @@ package de.mcs.hoglet.sst;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -71,9 +72,11 @@ public class SortedReaderQueue implements AutoCloseable {
   private Logger log = Logger.getLogger(this.getClass());
   private boolean deleteSource;
   private VLogEntryInfo lastVLogEntry;
+  private List<String> tableNames;
 
   public SortedReaderQueue(Options options) {
     this.readerList = new ArrayList<>();
+    this.tableNames = new ArrayList<>();
     this.options = options;
   }
 
@@ -96,11 +99,13 @@ public class SortedReaderQueue implements AutoCloseable {
   }
 
   public SortedReaderQueue open() throws IOException {
-    int number = 1;
+    tableNames.clear();
+    int number = 0;
     boolean found = true;
     while (found) {
       try {
         SSTableReader reader = SSTableReaderFactory.getReader(options, readingLevel, number);
+        tableNames.add(reader.getTableName());
         readerList.add(new QueuedReader(reader));
         lastVLogEntry = reader.getLastVLogEntry();
         number++;
@@ -143,6 +148,10 @@ public class SortedReaderQueue implements AutoCloseable {
 
   public VLogEntryInfo getLastVLogEntry() {
     return lastVLogEntry;
+  }
+
+  public List<String> getTableNames() {
+    return Collections.unmodifiableList(tableNames);
   }
 
 }

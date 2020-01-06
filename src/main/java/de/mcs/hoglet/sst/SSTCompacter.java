@@ -4,6 +4,7 @@
 package de.mcs.hoglet.sst;
 
 import java.io.IOException;
+import java.util.List;
 
 import de.mcs.hoglet.Options;
 import de.mcs.utils.logging.Logger;
@@ -37,7 +38,7 @@ public class SSTCompacter {
     return this;
   }
 
-  public void start() throws IOException, SSTException {
+  public List<String> start() throws IOException, SSTException {
     // open all sst files from reading readingLevel
     try (SortedReaderQueue queue = SortedReaderQueue.newSortedReaderQueue(options).withReadingLevel(readingLevel)
         .open()) {
@@ -51,9 +52,11 @@ public class SSTCompacter {
         }
         writer.setLastVLogEntry(queue.getLastVLogEntry());
       }
+      return queue.getTableNames();
     } catch (Exception e) {
       log.error(e);
     }
+    return null;
   }
 
 }
