@@ -40,6 +40,7 @@ class TestSSTCompact {
   private IDGenerator ids;
   private File dbFolder;
   private Options options;
+  private boolean useBaseFolder = false;
 
   /**
    * @throws java.lang.Exception
@@ -47,7 +48,8 @@ class TestSSTCompact {
   @BeforeEach
   void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.initFolder(true);
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true)
+        .withUseOnlyBaseFolder(useBaseFolder).getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(MAX_KEYS);
     ids = new QueuedIDGenerator(10000);
   }
@@ -72,12 +74,12 @@ class TestSSTCompact {
       long nr = x;
       byte[] key = ByteArrayUtils.longToBytes(nr);
       keys.add(key);
-
     }
+
     List<byte[]> saveKeys = new ArrayList<>();
     keys.forEach(key -> saveKeys.add(key));
     Random rnd = new Random(System.currentTimeMillis());
-    for (int x = 1; x <= MAX_ROUNDS; x++) {
+    for (int x = 0; x < MAX_ROUNDS; x++) {
 
       SortedMemoryTable table = new SortedMemoryTable(options);
       for (int i = 0; i < MAX_KEYS; i++) {

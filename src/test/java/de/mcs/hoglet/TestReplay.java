@@ -30,7 +30,7 @@ class TestReplay {
     ids = new QueuedIDGenerator(1000);
     Thread.sleep(1000);
 
-    dbFolder = SystemTestFolderHelper.initFolder(true);
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
   }
 
   @AfterAll

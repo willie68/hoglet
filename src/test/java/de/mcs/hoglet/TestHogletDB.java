@@ -55,7 +55,7 @@ public class TestHogletDB {
   @BeforeAll
   public static void beforeAll() throws IOException, InterruptedException {
     SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.initFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
   }
 
   @AfterAll

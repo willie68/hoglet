@@ -24,7 +24,7 @@ class TestVLogList {
   private static final String COLLECTION = "MCS";
 
   private static QueuedIDGenerator ids;
-  private static File filePath;
+  private static File dbFolder;
   private static Options options;
   private boolean created = false;
 
@@ -37,9 +37,10 @@ class TestVLogList {
     ids = new QueuedIDGenerator(1000);
     Thread.sleep(1000);
 
-    filePath = SystemTestFolderHelper.initFolder(DELETE_BEFORE_TEST);
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).withRAMDisk(false)
+        .getFolder();
 
-    options = Options.defaultOptions().withPath(filePath.getAbsolutePath()).withVlogMaxChunkCount(10000)
+    options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withVlogMaxChunkCount(10000)
         .withVlogMaxSize(2048L * 1024L * 1024L);
   }
 

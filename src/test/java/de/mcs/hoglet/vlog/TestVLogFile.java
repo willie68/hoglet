@@ -18,10 +18,7 @@
  */
 package de.mcs.hoglet.vlog;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -68,7 +65,7 @@ class TestVLogFile {
   private static final String COLLECTION = "MCS";
   private static final String COLLECTION_TOO_LONG = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456";
   private static final boolean DELETE_BEFORE_TEST = true;
-  private static File filePath;
+  private static File dbFolder;
   private static QueuedIDGenerator ids;
   private static Options options;
   private static Map<String, VLogEntryInfo> myMap;
@@ -84,9 +81,10 @@ class TestVLogFile {
     ids = new QueuedIDGenerator(1000);
     Thread.sleep(1000);
 
-    filePath = SystemTestFolderHelper.initFolder(DELETE_BEFORE_TEST);
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withRAMDisk(false).withDeleteBeforeTest(true)
+        .getFolder();
 
-    options = Options.defaultOptions().withPath(filePath.getAbsolutePath()).withVlogMaxChunkCount(10000)
+    options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withVlogMaxChunkCount(10000)
         .withVlogMaxSize(2048L * 1024L * 1024L);
     myIds = new ArrayList<>();
     myMap = new HashMap<>();
@@ -306,7 +304,7 @@ class TestVLogFile {
     Map<byte[], VLogEntryInfo> infos = new HashMap<>();
     VLogEntryInfo info = null;
 
-    Options myOptions = Options.defaultOptions().withPath(filePath.getAbsolutePath()).withVlogMaxChunkCount(10000)
+    Options myOptions = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withVlogMaxChunkCount(10000)
         .withVlogMaxSize(128L * 1024L * 1024L);
 
     try (VLogFile vLogFile = new VLogFile(myOptions, fileIndex)) {
@@ -352,7 +350,7 @@ class TestVLogFile {
     Map<byte[], VLogEntryInfo> infos = new HashMap<>();
     VLogEntryInfo info = null;
 
-    Options myOptions = Options.defaultOptions().withPath(filePath.getAbsolutePath()).withVlogMaxChunkCount(999)
+    Options myOptions = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withVlogMaxChunkCount(999)
         .withVlogMaxSize(1024L * 1024L * 1024L);
 
     try (VLogFile vLogFile = new VLogFile(myOptions, fileIndex)) {
@@ -401,12 +399,12 @@ class TestVLogFile {
     Map<byte[], VLogEntryInfo> infos = new HashMap<>();
     VLogEntryInfo info = null;
 
-    File vlogFolder = new File(filePath, "vlog");
+    File vlogFolder = new File(dbFolder, "vlog");
     if (!vlogFolder.exists()) {
       vlogFolder.mkdirs();
     }
 
-    Options myOptions = Options.defaultOptions().withPath(filePath.getAbsolutePath())
+    Options myOptions = Options.defaultOptions().withPath(dbFolder.getAbsolutePath())
         .withVlogPath(vlogFolder.getAbsolutePath());
 
     File vlogFile = new File(vlogFolder, DatabaseUtils.getVLogFileName(fileIndex));
@@ -463,7 +461,7 @@ class TestVLogFile {
   }
 
   private void deleteLogFile(int i) throws IOException, InterruptedException {
-    File vlogFile = VLogFile.getFilePathName(filePath, i);
+    File vlogFile = VLogFile.getFilePathName(dbFolder, i);
     if (vlogFile.exists()) {
       Files.remove(vlogFile, true);
       Thread.sleep(100);

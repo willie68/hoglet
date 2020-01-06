@@ -23,6 +23,7 @@ package de.mcs.utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Random;
 
 import de.mcs.jmeasurement.JMConfig;
 import de.mcs.jmeasurement.MeasureFactory;
@@ -33,21 +34,54 @@ import de.mcs.jmeasurement.MeasureFactory;
  */
 public class SystemTestFolderHelper {
 
-  private static final String EASY_DB_FOLDER_PATH = "r:/temp/hogletdb/";
-  private static final String DB_FOLDER_PATH = "r:/temp/hogletdb/";
+  private static final String EASY_DB_FOLDER_PATH = "h:/temp/hogletdb/";
+  private static final String DB_FOLDER_PATH = "e:/temp/hogletdb/";
 
-  public static File initFolder() throws IOException, InterruptedException {
-    return initFolder(true);
+  private static final String RAM_DISK_EASY_DB_FOLDER_PATH = "r:/temp/hogletdb/";
+  private static final String RAM_DISK_DB_FOLDER_PATH = "r:/temp/hogletdb/";
+
+  public static SystemTestFolderHelper newSystemTestFolderHelper() {
+    return new SystemTestFolderHelper().withUseOnlyBaseFolder(false).withRAMDisk(true);
   }
 
-  public static File initFolder(boolean deleteBeforeTest) throws IOException, InterruptedException {
-    File dbFolder = new File(DB_FOLDER_PATH);
-    if ("CBP1ZF2".equals(SystemHelper.getComputerName())) {
-      dbFolder = new File(EASY_DB_FOLDER_PATH);
+  private boolean deleteBeforeTest;
+  private boolean useBaseFolder;
+  private boolean ramDisk;
+
+  public SystemTestFolderHelper withDeleteBeforeTest(boolean deleteBeforeTest) {
+    this.deleteBeforeTest = deleteBeforeTest;
+    return this;
+  }
+
+  public SystemTestFolderHelper withUseOnlyBaseFolder(boolean useBaseFolder) {
+    this.useBaseFolder = useBaseFolder;
+    return this;
+  }
+
+  public File getFolder() throws IOException, InterruptedException {
+    File baseFolder = new File(DB_FOLDER_PATH);
+    if (ramDisk) {
+      baseFolder = new File(RAM_DISK_DB_FOLDER_PATH);
+      if ("CBP1ZF2".equals(SystemHelper.getComputerName())) {
+        baseFolder = new File(RAM_DISK_EASY_DB_FOLDER_PATH);
+      }
+    } else {
+      if ("CBP1ZF2".equals(SystemHelper.getComputerName())) {
+        baseFolder = new File(EASY_DB_FOLDER_PATH);
+      }
     }
-    if (dbFolder.exists() && deleteBeforeTest) {
-      Files.remove(dbFolder, true);
-      Thread.sleep(100);
+    baseFolder.mkdirs();
+    if (deleteBeforeTest) {
+      de.mcs.utils.Files.remove(baseFolder, true);
+      baseFolder.mkdirs();
+    }
+    File dbFolder = baseFolder;
+    if (!useBaseFolder) {
+      Random rnd = new Random(System.currentTimeMillis());
+      while (dbFolder.exists()) {
+        String foldername = String.format("test_%d", rnd.nextInt(100000));
+        dbFolder = new File(baseFolder, foldername);
+      }
     }
     dbFolder.mkdirs();
     return dbFolder;
@@ -60,6 +94,11 @@ public class SystemTestFolderHelper {
   public static void outputStatistics() {
     System.out.println();
     System.out.println(MeasureFactory.asString());
+  }
+
+  public SystemTestFolderHelper withRAMDisk(boolean ramDisk) {
+    this.ramDisk = ramDisk;
+    return this;
   }
 
 }

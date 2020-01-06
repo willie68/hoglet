@@ -43,7 +43,7 @@ class TestSSTableReaderMMF {
   @BeforeAll
   public static void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.initFolder(true);
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(100000);
     table = new SortedMemoryTable(options);
     ids = new QueuedIDGenerator(10000);

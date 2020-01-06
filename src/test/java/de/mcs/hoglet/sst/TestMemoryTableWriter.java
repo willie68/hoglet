@@ -19,13 +19,6 @@ import org.junit.jupiter.api.Test;
 
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
-import de.mcs.hoglet.sst.Entry;
-import de.mcs.hoglet.sst.MapKey;
-import de.mcs.hoglet.sst.MemoryTableWriter;
-import de.mcs.hoglet.sst.SSTException;
-import de.mcs.hoglet.sst.SSTableReader;
-import de.mcs.hoglet.sst.SSTableReaderFactory;
-import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.IDGenerator;
@@ -50,7 +43,7 @@ class TestMemoryTableWriter {
   @BeforeAll
   public static void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.initFolder(true);
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(100000);
     table = new SortedMemoryTable(options);
     ids = new QueuedIDGenerator(10000);

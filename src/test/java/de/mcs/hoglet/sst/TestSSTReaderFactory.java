@@ -25,7 +25,7 @@ class TestSSTReaderFactory {
   @BeforeEach
   void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.initFolder(true);
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath());
   }
 

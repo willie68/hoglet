@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
@@ -17,7 +18,7 @@ import de.mcs.utils.SystemTestFolderHelper;
 
 class TestCompaction {
 
-  private static final int MAX_DOC_COUNT = 150000;
+  private static final int MAX_DOC_COUNT = 15000;
   private static final int MEM_TABLE_MAX_KEYS = 1000;
   private HogletDB hogletDB;
   private static File dbFolder;
@@ -29,7 +30,7 @@ class TestCompaction {
     ids = new QueuedIDGenerator(1000);
     Thread.sleep(1000);
 
-    dbFolder = SystemTestFolderHelper.initFolder(true);
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
   }
 
   @AfterAll
@@ -79,10 +80,14 @@ class TestCompaction {
       System.out.println("ready, waiting for new SST file");
     }
 
-    System.out.println("starting hogletDB");
+    System.out.println("shufffle keys");
+    Collections.shuffle(keys);
+
+    System.out.println("restarting hogletDB");
     try (HogletDB hogletDB = new HogletDB(
         Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(MEM_TABLE_MAX_KEYS))) {
 
+      int savePercent = 0;
       assertFalse(hogletDB.isReadonly());
       int count = 0;
       for (byte[] key : keys) {
@@ -94,6 +99,11 @@ class TestCompaction {
         count++;
         if ((count % 100) == 0) {
           System.out.print(".");
+        }
+        int percent = (count * 100) / keys.size();
+        if (percent != savePercent) {
+          System.out.printf("\r\n%d %% Percent done.\r\n", percent);
+          savePercent = percent;
         }
       }
     }

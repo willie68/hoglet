@@ -23,7 +23,7 @@ package de.mcs.hoglet;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +49,7 @@ class TestHogletDBReadOnly {
   public static void beforeAll() throws IOException, InterruptedException {
     SystemTestFolderHelper.initStatistics();
     ids = new QueuedIDGenerator(1000);
-    dbFolder = SystemTestFolderHelper.initFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
   }
 
   @AfterAll
