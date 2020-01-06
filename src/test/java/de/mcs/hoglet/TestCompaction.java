@@ -1,7 +1,6 @@
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,7 +36,7 @@ class TestCompaction {
   }
 
   @Test
-  public void testReplay() throws IOException {
+  public void testCompacting() throws IOException {
     List<byte[]> keys = new ArrayList<>();
 
     try (HogletDB hogletDB = new HogletDB(Options.defaultOptions().withPath(dbFolder.getAbsolutePath())
@@ -47,7 +46,7 @@ class TestCompaction {
 
       System.out.println("adding keys.");
 
-      for (int i = 0; i < 15000; i++) {
+      for (int i = 0; i < 150000; i++) {
         byte[] key = ids.getByteID();
         keys.add(key);
 

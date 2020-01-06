@@ -1,8 +1,6 @@
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -73,7 +71,7 @@ class TestReplay {
         assertTrue(hogletDB.contains(key));
 
         byte[] storedValue = hogletDB.get(key);
-        // assertTrue(Arrays.equals(value, storedValue));
+        assertTrue(Arrays.equals(value, storedValue));
       }
 
       System.out.println("ready, waiting for new SST file");
@@ -91,7 +89,7 @@ class TestReplay {
         count++;
 
         byte[] storedValue = hogletDB.get(key);
-        // assertTrue(Arrays.equals(value, storedValue));
+        assertTrue(Arrays.equals(value, storedValue));
       }
     }
   }

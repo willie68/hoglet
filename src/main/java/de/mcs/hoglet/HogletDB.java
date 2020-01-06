@@ -46,6 +46,7 @@ import com.google.common.eventbus.EventBus;
 
 import de.mcs.hoglet.event.WriteImmutableTableEventListener;
 import de.mcs.hoglet.event.WriteImmutableTableEventListener.WriteImmutableTableEvent;
+import de.mcs.hoglet.sst.Entry;
 import de.mcs.hoglet.sst.MapKey;
 import de.mcs.hoglet.sst.MemoryTable;
 import de.mcs.hoglet.sst.SSTException;
@@ -372,8 +373,39 @@ public class HogletDB implements Closeable {
   private byte[] getKey(String collection, byte[] key) throws HogletDBException {
     byte[] bs = memoryTable.get(collection, key);
     if (bs == null) {
+      immutableTableLock.lock();
+      try {
+        if (immutableTable != null) {
+          bs = immutableTable.get(collection, key);
+        }
+      } finally {
+        immutableTableLock.unlock();
+      }
+    }
+
+    if (bs == null) {
+      for (ListIterator<SSTableReader> iterator = ssTableManager.iteratorInCreationOrder(); iterator.hasNext();) {
+        SSTableReader ssTableReader = iterator.next();
+        MapKey mapkey = MapKey.buildPrefixedKey(collection, key);
+        try {
+          if (ssTableReader.mightContain(mapkey)) {
+            Entry entry = ssTableReader.get(mapkey);
+            if (entry != null) {
+              bs = entry.getValue();
+            }
+            if (bs != null) {
+              break;
+            }
+          }
+        } catch (IOException | SSTException e) {
+          log.error("Error in SSTable", e);
+        }
+      }
+    }
+    if (bs == null) {
       return null;
     }
+
     VLogEntryInfo info = VLogEntryInfo.fromJson(new String(bs, StandardCharsets.UTF_8));
     try (VLog vLog = vLogList.getVLog(info.getvLogName())) {
       return vLog.getValue(info.getStartBinary(), info.getBinarySize());
