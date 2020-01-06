@@ -34,7 +34,7 @@ import de.mcs.jmeasurement.MeasureFactory;
 public class SystemTestFolderHelper {
 
   private static final String DB_FOLDER_PATH = "e:/temp/hogletdb/";
-  private static final String EASY_DB_FOLDER_PATH = "h:/temp/hogletdb/";
+  private static final String EASY_DB_FOLDER_PATH = "r:/temp/hogletdb/";
 
   public static File initFolder() throws IOException, InterruptedException {
     return initFolder(true);
@@ -58,6 +58,7 @@ public class SystemTestFolderHelper {
   }
 
   public static void outputStatistics() {
+    System.out.println();
     System.out.println(MeasureFactory.asString());
   }
 

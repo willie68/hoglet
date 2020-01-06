@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
@@ -16,6 +17,7 @@ import de.mcs.utils.SystemTestFolderHelper;
 
 class TestCompaction {
 
+  private static final int MAX_DOC_COUNT = 150000;
   private static final int MEM_TABLE_MAX_KEYS = 1000;
   private HogletDB hogletDB;
   private static File dbFolder;
@@ -46,7 +48,7 @@ class TestCompaction {
 
       System.out.println("adding keys.");
 
-      for (int i = 0; i < 150000; i++) {
+      for (int i = 0; i < MAX_DOC_COUNT; i++) {
         byte[] key = ids.getByteID();
         keys.add(key);
 
@@ -60,12 +62,18 @@ class TestCompaction {
         }
       }
 
+      int count = 0;
       for (byte[] key : keys) {
 
         assertTrue(hogletDB.contains(key));
 
         byte[] storedValue = hogletDB.get(key);
-        // assertTrue(Arrays.equals(key, storedValue));
+        assertTrue(Arrays.equals(key, storedValue));
+
+        count++;
+        if ((count % 100) == 0) {
+          System.out.print(".");
+        }
       }
 
       System.out.println("ready, waiting for new SST file");
@@ -80,10 +88,13 @@ class TestCompaction {
       for (byte[] key : keys) {
 
         assertTrue(hogletDB.contains(key), "can't find key count " + count);
-        count++;
 
         byte[] storedValue = hogletDB.get(key);
-        // assertTrue(Arrays.equals(value, storedValue));
+        assertTrue(Arrays.equals(key, storedValue));
+        count++;
+        if ((count % 100) == 0) {
+          System.out.print(".");
+        }
       }
     }
   }

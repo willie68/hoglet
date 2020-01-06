@@ -340,8 +340,8 @@ public class Options {
   public String toYaml() {
     StringWriter writer = new StringWriter();
     writer.append("# Attention: don't mess with this configuration file.\r\n");
-    writer.append("# changes could lead into not working database.\r\n");
-    writer.append("# only do changes, if you're knowing what to do.\r\n");
+    writer.append("# Changes can cause the database to stop working.\r\n");
+    writer.append("# Make changes only if you know what to do.\r\n");
     GsonUtils.getYamlMapper().dump(this, writer);
     return writer.toString();
   }
@@ -572,15 +572,17 @@ public class Options {
   }
 
   /**
-   * @param vlogPath the vlogPath to set
+   * @param vlogPath
+   *          the vlogPath to set
    */
   public void setVlogPath(String vlogPath) {
     this.vlogPath = vlogPath;
   }
 
   /**
-   * @param vlogPath the vlogPath to set
-   * @return 
+   * @param vlogPath
+   *          the vlogPath to set
+   * @return
    */
   public Options withVlogPath(String vlogPath) {
     this.vlogPath = vlogPath;
