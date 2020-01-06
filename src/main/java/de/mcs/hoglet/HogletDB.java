@@ -407,6 +407,9 @@ public class HogletDB implements Closeable {
     }
 
     VLogEntryInfo info = VLogEntryInfo.fromJson(new String(bs, StandardCharsets.UTF_8));
+    if (info.getValue() != null) {
+      return info.getValue();
+    }
     try (VLog vLog = vLogList.getVLog(info.getvLogName())) {
       return vLog.getValue(info.getStartBinary(), info.getBinarySize());
     } catch (IOException e) {
@@ -421,9 +424,13 @@ public class HogletDB implements Closeable {
     try {
       VLog vLog = vLogList.getNextAvailableVLog();
       // log.debug("putting into vlog file %s", vLog.getName());
-      VLogEntryInfo info = vLog.put(collection, key, 0, value, Operation.ADD);
+      Operation operation = Operation.ADD;
+      if (value.length < options.getDirectValueTreshHold()) {
+        operation = Operation.ADD_DIRECT;
+      }
+      VLogEntryInfo info = vLog.put(collection, key, 0, value, operation);
       if (memoryTable.isAvailbleForWriting()) {
-        return memoryTable.add(collection, key, Operation.ADD, info.asJson().getBytes(StandardCharsets.UTF_8));
+        return memoryTable.add(collection, key, operation, info.asJson().getBytes(StandardCharsets.UTF_8));
       }
 
       int count = 0;
@@ -444,7 +451,7 @@ public class HogletDB implements Closeable {
       memoryTable = getNewMemoryTable();
       eventBus.post(new WriteImmutableTableEvent());
 
-      return memoryTable.add(collection, key, Operation.ADD, info.asJson().getBytes(StandardCharsets.UTF_8));
+      return memoryTable.add(collection, key, operation, info.asJson().getBytes(StandardCharsets.UTF_8));
     } catch (IOException e) {
       throw new HogletDBException(e);
     }

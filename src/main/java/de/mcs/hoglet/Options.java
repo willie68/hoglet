@@ -51,7 +51,8 @@ public class Options {
         .withMemActiveBloomFilter(true)
         .withLvlTableCount(10)
         .withSSTReadStrategy(SSTReadStrategy.MMF)
-        .withSSTMaxLevels(10);
+        .withSSTMaxLevels(10)
+        .withDirectValueTreshHold(128);
     // @formatter:on
   }
 
@@ -157,6 +158,11 @@ public class Options {
    * max count of levels
    */
   private int sstMaxLevels;
+
+  /**
+   * if the size of value is beneth this value, the value will be stored directly into the string table.
+   */
+  private int directValueTreshHold;
 
   /**
    * @return the vCntDeleteTreshHold
@@ -586,6 +592,31 @@ public class Options {
    */
   public Options withVlogPath(String vlogPath) {
     this.vlogPath = vlogPath;
+    return this;
+  }
+
+  /**
+   * @return the directValueTreshHold
+   */
+  public int getDirectValueTreshHold() {
+    return directValueTreshHold;
+  }
+
+  /**
+   * @param directValueTreshHold
+   *          the directValueTreshHold to set
+   */
+  public void setDirectValueTreshHold(int directValueTreshHold) {
+    this.directValueTreshHold = directValueTreshHold;
+  }
+
+  /**
+   * @param directValueTreshHold
+   *          the directValueTreshHold to set
+   * @return
+   */
+  public Options withDirectValueTreshHold(int directValueTreshHold) {
+    this.setDirectValueTreshHold(directValueTreshHold);
     return this;
   }
 }

@@ -26,5 +26,5 @@ package de.mcs.hoglet;
  *
  */
 public enum Operation {
-  ADD, UPDATE, DELETE, COMPACT
+  ADD, UPDATE, DELETE, COMPACT, ADD_DIRECT, UPDATE_DIRECT
 }

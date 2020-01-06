@@ -142,9 +142,7 @@ public class VLogFile implements Closeable {
     crc32.update(chunk);
     digest = ByteArrayUtils.longToBytes(crc32.getValue());
 
-    VLogEntryInfo info = new VLogEntryInfo();
-    info.start = fileChannel.position();
-    info.hash = digest;
+    VLogEntryInfo info = new VLogEntryInfo().withStart(fileChannel.position()).withHash(digest);
 
     VLogDescriptor vlogDescriptor = new VLogDescriptor();
     vlogDescriptor.collectionBytes = collectionBytes;
@@ -166,6 +164,9 @@ public class VLogFile implements Closeable {
     fileChannel.force(false);
     info.setvLogName(getName());
     chunkCount++;
+    if (operation.equals(Operation.ADD_DIRECT)) {
+      info.setValue(chunk);
+    }
     return info;
   }
 

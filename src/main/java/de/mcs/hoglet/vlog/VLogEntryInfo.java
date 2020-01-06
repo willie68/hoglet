@@ -40,6 +40,7 @@ public class VLogEntryInfo {
 
   /**
    * public creation of new VLogEntryInfo
+   * 
    * @return new empty VLogEntryInfo
    */
   public static VLogEntryInfo newVLogEntryInfo() {
@@ -49,8 +50,9 @@ public class VLogEntryInfo {
   long start;
   long startBinary;
   long end;
-  byte[] hash;
-  private String vLogName;
+  String hash;
+  String vLogName;
+  String value;
 
   /**
    * @return the start
@@ -70,7 +72,12 @@ public class VLogEntryInfo {
    * @return the hash
    */
   public byte[] getHash() {
-    return hash;
+    try {
+      return ByteArrayUtils.decodeHex(hash);
+    } catch (Exception e) {
+      // DONE should never occure
+    }
+    return null;
   }
 
   public int getBinarySize() {
@@ -83,8 +90,7 @@ public class VLogEntryInfo {
 
   @Override
   public String toString() {
-    return String.format("start: %d, bin: %d, end: %d, hash: %s, file: %s", start, startBinary, end,
-        ByteArrayUtils.bytesAsHexString(hash), vLogName);
+    return String.format("start: %d, bin: %d, end: %d, hash: %s, file: %s", start, startBinary, end, hash, vLogName);
   }
 
   public int getDescriptionSize() {
@@ -124,7 +130,7 @@ public class VLogEntryInfo {
    * @return
    */
   public void setHash(byte[] hash) {
-    this.hash = hash;
+    this.hash = ByteArrayUtils.bytesAsHexString(hash);
   }
 
   /**
@@ -197,6 +203,36 @@ public class VLogEntryInfo {
    */
   public VLogEntryInfo withVLogName(String vLogName) {
     this.setvLogName(vLogName);
+    return this;
+  }
+
+  /**
+   * @return the value
+   */
+  public byte[] getValue() {
+    try {
+      return ByteArrayUtils.decodeHex(value);
+    } catch (Exception e) {
+      // DONE should never occure
+    }
+    return null;
+  }
+
+  /**
+   * @param value
+   *          the value to set
+   */
+  public void setValue(byte[] value) {
+    this.value = ByteArrayUtils.bytesAsHexString(value);
+  }
+
+  /**
+   * @param value
+   *          the value to set
+   * @return
+   */
+  public VLogEntryInfo withValue(byte[] value) {
+    this.setValue(value);
     return this;
   }
 

@@ -223,4 +223,40 @@ public class TestHogletDB {
       assertEquals(MAX_CHUNKS, chunkCount);
     }
   }
+
+  @Test
+  public void testDirectValues() throws HogletDBException {
+    assertFalse(hogletDB.isReadonly());
+
+    byte[] key = UUID.randomUUID().toString().getBytes();
+
+    byte[] value = new byte[64];
+    new Random().nextBytes(value);
+
+    assertFalse(hogletDB.contains(key));
+    assertNull(hogletDB.get(key));
+
+    hogletDB.put(key, value);
+
+    assertTrue(hogletDB.contains(key));
+
+    byte[] storedValue = hogletDB.get(key);
+    assertTrue(Arrays.equals(value, storedValue));
+
+    value = new byte[64];
+    new Random().nextBytes(value);
+    hogletDB.put(key, value);
+
+    assertTrue(hogletDB.contains(key));
+
+    storedValue = hogletDB.get(key);
+    assertTrue(Arrays.equals(value, storedValue));
+
+    byte[] remove = hogletDB.remove(key);
+    assertTrue(Arrays.equals(value, remove));
+
+    assertFalse(hogletDB.contains(key));
+    assertNull(hogletDB.get(key));
+  }
+
 }
