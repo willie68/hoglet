@@ -42,7 +42,7 @@ public class Options {
     return new Options().withVCntCompressAge(0)
         .withVCntDeleteTreshHold(10)
         .withVLogAge(1 * 60 * 60 * 1000)
-        .withVlogMaxChunkCount(10000)
+        .withVlogMaxChunkCount(100000)
         .withVlogMaxSize(100 * 1024 * 1024)
         .withVlogMaxFileCount(10)
         .withChunkSize(1024 * 1024)

@@ -139,16 +139,4 @@ public class ChunkEntry {
     this.length = length;
     return this;
   }
-
-  // /**
-  // * @return the _type
-  // */
-  // public String get_type() {
-  // return _type;
-  // }
-  //
-  // public boolean isRightTyped() {
-  // return this.getClass().getSimpleName().equals(_type);
-  // }
-
 }

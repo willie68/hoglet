@@ -91,7 +91,7 @@ public class SSTStatus {
    * @return
    */
   public SSTStatus withChunkCount(long chunkCount) {
-    this.chunkCount = chunkCount;
+    this.setChunkCount(chunkCount);
     return this;
   }
 
@@ -116,7 +116,7 @@ public class SSTStatus {
    * @return
    */
   public SSTStatus withCreatedAt(Date createdAt) {
-    this.createdAt = createdAt.getTime();
+    this.setCreatedAt(createdAt);
     return this;
   }
 
@@ -141,7 +141,7 @@ public class SSTStatus {
    * @return
    */
   public SSTStatus withLastVLogEntry(VLogEntryInfo lastVLogEntry) {
-    this.lastVLogEntry = lastVLogEntry;
+    this.setLastVLogEntry(lastVLogEntry);
     return this;
   }
 

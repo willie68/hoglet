@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.Test;
 
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.utils.DatabaseUtils;
+import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.IDGenerator;
@@ -35,7 +38,7 @@ class TestSSTableReaderMMF {
   private static List<byte[]> keys;
   private String collection = "Default";
   int level = 1;
-  int count = 1;
+  int number = 1;
 
   /**
    * @throws java.lang.Exception
@@ -74,13 +77,15 @@ class TestSSTableReaderMMF {
       table.add(collection, key, Operation.ADD, key);
     }
 
+    VLogEntryInfo lastEntry = VLogEntryInfo.newVLogEntryInfo().withEnd(12345);
+
     System.out.println("checking key/values");
     for (byte[] key : keys) {
       assertTrue(table.containsKey(collection, key));
     }
 
     System.out.println("start writing SST");
-    try (MemoryTableWriter writer = new MemoryTableWriter(options, level, count)) {
+    try (MemoryTableWriter writer = new MemoryTableWriter(options, level, number)) {
       table.forEach(entry -> {
         try {
           writer.write(entry);
@@ -88,6 +93,7 @@ class TestSSTableReaderMMF {
           e.printStackTrace();
         }
       });
+      writer.setLastVLogEntry(lastEntry);
       System.out.println("checking bloomfilter of writer.");
     }
 
@@ -101,8 +107,13 @@ class TestSSTableReaderMMF {
     });
 
     Monitor mOpen = MeasureFactory.start("SSTableReaderMMF.open");
-    try (SSTableReaderMMF reader = new SSTableReaderMMF(options, level, count)) {
+    try (SSTableReaderMMF reader = new SSTableReaderMMF(options, level, number)) {
       mOpen.stop();
+
+      VLogEntryInfo lastVLogEntry = reader.getLastVLogEntry();
+      assertEquals(lastEntry.getEnd(), lastVLogEntry.getEnd());
+
+      assertEquals(DatabaseUtils.getSSTFileName(level, number), reader.getTableName());
       for (byte[] cs : keys) {
         MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
         Monitor m = MeasureFactory.start("SSTableReaderMMF.mightContain");
@@ -118,7 +129,7 @@ class TestSSTableReaderMMF {
     System.out.println("SSTableReader: check containing");
     Random rnd = new Random(System.currentTimeMillis());
     long countExisting = 0;
-    try (SSTableReaderMMF reader = new SSTableReaderMMF(options, level, count)) {
+    try (SSTableReaderMMF reader = new SSTableReaderMMF(options, level, number)) {
       for (int i = 0; i < 1000; i++) {
         boolean existing = rnd.nextBoolean();
         if (existing) {
@@ -126,8 +137,12 @@ class TestSSTableReaderMMF {
           byte[] cs = keys.get(index);
           MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
 
-          Monitor m = MeasureFactory.start("SSTableReaderMMF.contain");
+          Monitor m = MeasureFactory.start("SSTableReaderMMF.mightContain");
           assertTrue(reader.mightContain(mapKey));
+          m.stop();
+
+          m = MeasureFactory.start("SSTableReaderMMF.contain");
+          assertTrue(reader.contains(mapKey));
           m.stop();
 
           m = MeasureFactory.start("SSTableReaderMMF.get");
@@ -150,6 +165,33 @@ class TestSSTableReaderMMF {
     }
   }
 
+  @Order(3)
+  @Test
+  public void testIterator() throws IOException, SSTException {
+    System.out.println("SSTableReader: check containing");
+    Random rnd = new Random(System.currentTimeMillis());
+    List<byte[]> newKeys = new ArrayList<>();
+    newKeys.addAll(keys);
+
+    long countExisting = 0;
+    try (SSTableReaderMMF reader = new SSTableReaderMMF(options, level, number)) {
+      for (Iterator<Entry> iterator = reader.entries(); iterator.hasNext();) {
+        Entry next = iterator.next();
+        boolean found = false;
+        for (Iterator iterator2 = newKeys.iterator(); iterator2.hasNext();) {
+          byte[] bs = (byte[]) iterator2.next();
+          if (Arrays.equals(bs, next.getKey().getKeyBytes())) {
+            found = true;
+            iterator2.remove();
+            break;
+          }
+        }
+        assertTrue(found);
+        countExisting++;
+      }
+    }
+  }
+
   @Test
   public void testLevelNumber() {
     Assertions.assertThrows(SSTException.class, () -> {
@@ -167,4 +209,5 @@ class TestSSTableReaderMMF {
       new SSTableReaderMMF(options, 2, 2);
     });
   }
+
 }

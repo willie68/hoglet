@@ -42,7 +42,8 @@ public class SSTCompacter {
     // open all sst files from reading readingLevel
     try (SortedReaderQueue queue = SortedReaderQueue.newSortedReaderQueue(options).withReadingLevel(readingLevel)
         .open()) {
-      try (MemoryTableWriter writer = new MemoryTableWriter(options, readingLevel + 1, writingNumber)) {
+      int writingLevel = readingLevel + 1;
+      try (MemoryTableWriter writer = new MemoryTableWriter(options, writingLevel, writingNumber)) {
 
         while (queue.isAvailable()) {
           Entry entry = queue.getNextEntry();

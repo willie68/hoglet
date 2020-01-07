@@ -86,7 +86,7 @@ public class Entry {
    * @return
    */
   public Entry withOperation(Operation operation) {
-    this.operation = operation;
+    this.setOperation(operation);
     return this;
   }
 }

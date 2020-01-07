@@ -80,13 +80,13 @@ public class MemoryTableWriter implements Closeable {
 
   private void init() throws SSTException, IOException {
     if (level < 0) {
-      throw new SSTException("level should be greater than 0");
+      throw new SSTException("level should be greater or equal 0");
     }
     if (number < 0) {
-      throw new SSTException("number should be greater than 0");
+      throw new SSTException("number should be greater or equal 0");
     }
     MapKeyFunnel funnel = new MapKeyFunnel();
-    long keyCount = ((long) Math.pow(options.getLvlTableCount(), level - 1)) * options.getMemTableMaxKeys();
+    long keyCount = ((long) Math.pow(options.getLvlTableCount(), level)) * options.getMemTableMaxKeys();
     bloomfilter = BloomFilter.create(funnel, keyCount, 0.01);
 
     createSSTable();

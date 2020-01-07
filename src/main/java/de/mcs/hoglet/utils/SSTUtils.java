@@ -36,13 +36,18 @@ import de.mcs.hoglet.sst.SSTException;
 public class SSTUtils {
   /**
    * writing the memory table to the first level on the storage.
-   * @param options the database options to use
-   * @param number the number of the sst file
-   * @param table the memory table to write out
-   * @param lastVLogEntry the last VLogentry of the memory table
-   * @return 
-   * @throws IOException if something goes wrong on the file system
-   * @throws SSTException if t´something goes wrong with the sst management
+   * 
+   * @param options
+   *          the database options to use
+   * @param number
+   *          the number of the sst file
+   * @param table
+   *          the memory table to write out
+   * @return
+   * @throws IOException
+   *           if something goes wrong on the file system
+   * @throws SSTException
+   *           if something goes wrong with the sst management
    */
   public static File writeMemoryTable(Options options, int number, MemoryTable table) throws IOException, SSTException {
     try (MemoryTableWriter writer = new MemoryTableWriter(options, 0, number)) {
