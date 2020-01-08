@@ -1,8 +1,6 @@
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,9 +22,9 @@ import de.mcs.utils.SystemTestFolderHelper;
 
 class TestCompaction {
 
-  private static final int MAX_DOC_COUNT = 3000;
+  private static final int MAX_DOC_COUNT = 30000;
   private static final int DELETE_DOC_COUNT = MAX_DOC_COUNT / 3;
-  private static final int MEM_TABLE_MAX_KEYS = 100;
+  private static final int MEM_TABLE_MAX_KEYS = 1000;
   private static File dbFolder;
   private static QueuedIDGenerator ids;
   private static List<byte[]> keys;

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.List;
 
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.sst.SortedReaderQueue.QueuedReaderEntry;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -46,9 +47,9 @@ public class SSTCompacter {
       try (MemoryTableWriter writer = new MemoryTableWriter(options, writingLevel, writingNumber)) {
 
         while (queue.isAvailable()) {
-          Entry entry = queue.getNextEntry();
+          QueuedReaderEntry entry = queue.getNextEntry();
           if (entry != null) {
-            writer.write(entry);
+            writer.write(entry.getEntry());
           }
         }
         writer.setLastVLogEntry(queue.getLastVLogEntry());

@@ -71,4 +71,10 @@ public interface SSTableReader extends Closeable {
    */
   String getTableName();
 
+  /**
+   * 
+   * @return the identity of this reader.
+   */
+  SSTIdentity getSSTIdentity();
+
 }

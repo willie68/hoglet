@@ -23,6 +23,55 @@ public class SortedReaderQueue implements AutoCloseable {
     return new SortedReaderQueue(options);
   }
 
+  public static class QueuedReaderEntry {
+    private SSTIdentity sstIdentity;
+    private Entry entry;
+
+    /**
+     * @return the sstIdentity
+     */
+    public SSTIdentity getSstIdentity() {
+      return sstIdentity;
+    }
+
+    /**
+     * @param sstIdentity
+     *          the sstIdentity to set
+     */
+    public void setSstIdentity(SSTIdentity sstIdentity) {
+      this.sstIdentity = sstIdentity;
+    }
+
+    /**
+     * @return the entry
+     */
+    public Entry getEntry() {
+      return entry;
+    }
+
+    /**
+     * @param entry
+     *          the entry to set
+     */
+    public void setEntry(Entry entry) {
+      this.entry = entry;
+    }
+
+    public static QueuedReaderEntry newQueuedReaderEntry() {
+      return new QueuedReaderEntry();
+    }
+
+    public QueuedReaderEntry withEntry(Entry entry) {
+      setEntry(entry);
+      return this;
+    }
+
+    public QueuedReaderEntry withSSTIdentity(SSTIdentity identity) {
+      setSstIdentity(identity);
+      return this;
+    }
+  }
+
   private class QueuedReader implements AutoCloseable {
 
     private Entry nextEntry = null;
@@ -63,6 +112,10 @@ public class SortedReaderQueue implements AutoCloseable {
 
     public void close() throws IOException {
       reader.close();
+    }
+
+    public SSTIdentity getSSTIdentity() {
+      return reader.getSSTIdentity();
     }
   }
 
@@ -125,7 +178,7 @@ public class SortedReaderQueue implements AutoCloseable {
     return false;
   }
 
-  public Entry getNextEntry() {
+  public QueuedReaderEntry getNextEntry() {
     MapKey nextEntry = null;
     int nextIndex = 0;
     for (int i = 0; i < readerList.size(); i++) {
@@ -143,7 +196,8 @@ public class SortedReaderQueue implements AutoCloseable {
       }
     }
     QueuedReader reader = readerList.get(nextIndex);
-    return reader.next();
+    SSTIdentity identity = reader.getSSTIdentity();
+    return QueuedReaderEntry.newQueuedReaderEntry().withEntry(reader.next()).withSSTIdentity(identity);
   }
 
   public VLogEntryInfo getLastVLogEntry() {

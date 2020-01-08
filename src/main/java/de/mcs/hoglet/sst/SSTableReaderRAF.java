@@ -81,6 +81,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   private DatabaseUtils databaseUtils;
   private SSTStatus sstStatus;
   private long endOfSST;
+  private SSTIdentity sstIdentity;
 
   public SSTableReaderRAF(Options options, int level, int number) throws SSTException, IOException {
     this.options = options;
@@ -91,6 +92,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     Arrays.fill(this.indexList, 0);
     this.chunkCount = 0;
     this.readLock = new ReentrantLock();
+    this.sstIdentity = SSTIdentity.newSSTIdentity().withNumber(number).withLevel(level);
     init();
   }
 
@@ -303,4 +305,10 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   public String getTableName() {
     return filename;
   }
+
+  @Override
+  public SSTIdentity getSSTIdentity() {
+    return sstIdentity;
+  }
+
 }
