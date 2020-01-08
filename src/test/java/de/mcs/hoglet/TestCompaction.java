@@ -1,6 +1,8 @@
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +14,7 @@ import java.util.Random;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
 import de.mcs.jmeasurement.MeasureFactory;
@@ -21,10 +24,12 @@ import de.mcs.utils.SystemTestFolderHelper;
 
 class TestCompaction {
 
-  private static final int MAX_DOC_COUNT = 30000;
+  private static final int MAX_DOC_COUNT = 3000;
+  private static final int DELETE_DOC_COUNT = MAX_DOC_COUNT / 3;
   private static final int MEM_TABLE_MAX_KEYS = 100;
   private static File dbFolder;
   private static QueuedIDGenerator ids;
+  private static List<byte[]> keys;
 
   @BeforeAll
   public static void beforeAll() throws IOException, InterruptedException {
@@ -40,9 +45,10 @@ class TestCompaction {
     SystemTestFolderHelper.outputStatistics();
   }
 
+  @Order(1)
   @Test
   public void testCompacting() throws IOException {
-    List<byte[]> keys = new ArrayList<>();
+    keys = new ArrayList<>();
 
     byte[] value = new byte[1024];
     new Random(System.currentTimeMillis()).nextBytes(value);
@@ -103,8 +109,10 @@ class TestCompaction {
       System.out.println("ready, waiting for new SST file");
     }
 
+    List<byte[]> myKeys = new ArrayList<>();
+    myKeys.addAll(keys);
     System.out.println("shufffle keys");
-    Collections.shuffle(keys);
+    Collections.shuffle(myKeys);
 
     System.out.println("restarting hogletDB");
     try (HogletDB hogletDB = new HogletDB(
@@ -115,7 +123,7 @@ class TestCompaction {
       int savePercent = 0;
       assertFalse(hogletDB.isReadonly());
       int count = 0;
-      for (byte[] key : keys) {
+      for (byte[] key : myKeys) {
 
         Monitor m = MeasureFactory.start(this, "ContainingContains");
         boolean contains = hogletDB.contains(key);
@@ -162,6 +170,63 @@ class TestCompaction {
         assertNull(storedValue);
 
         int percent = (i * 100) / MAX_DOC_COUNT;
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
+        }
+      }
+    }
+  }
+
+  @Order(2)
+  @Test
+  public void testDeletionOfCompactedKeys() throws HogletDBException {
+    List<byte[]> delKeys = new ArrayList<>();
+    List<byte[]> myKeys = new ArrayList<>();
+    myKeys.addAll(keys);
+    for (int i = 0; i < DELETE_DOC_COUNT; i++) {
+      byte[] bs = myKeys.remove(0);
+      delKeys.add(bs);
+    }
+    System.out.println("restarting hogletDB");
+    try (HogletDB hogletDB = new HogletDB(
+        Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(MEM_TABLE_MAX_KEYS))) {
+
+      assertFalse(hogletDB.isReadonly());
+
+      System.out.println("deleting keys.");
+      int count = 0;
+      int savePercent = 0;
+      for (byte[] key : delKeys) {
+        hogletDB.remove(key);
+        count++;
+        int percent = (count * 100) / keys.size();
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
+        }
+      }
+
+      System.out.println("testing deleted keys.");
+      count = 0;
+      savePercent = 0;
+      for (byte[] key : delKeys) {
+        assertFalse(hogletDB.contains(key));
+        count++;
+        int percent = (count * 100) / keys.size();
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
+        }
+      }
+
+      System.out.println("testing not deleted keys.");
+      count = 0;
+      savePercent = 0;
+      for (byte[] key : myKeys) {
+        assertTrue(hogletDB.contains(key));
+        count++;
+        int percent = (count * 100) / keys.size();
         if (percent != savePercent) {
           System.out.printf("%d %% Percent done.\r\n", percent);
           savePercent = percent;

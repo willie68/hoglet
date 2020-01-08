@@ -13,6 +13,8 @@ public interface MemoryTable extends Iterable<Entry> {
 
   byte[] add(String collection, byte[] key, Operation operation, byte[] bytes);
 
+  Operation getOperation(String collection, byte[] key);
+
   int size();
 
   boolean isAvailbleForWriting();

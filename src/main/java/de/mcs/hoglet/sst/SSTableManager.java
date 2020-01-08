@@ -274,4 +274,15 @@ public class SSTableManager {
       }
     }
   }
+
+  public void close() throws IOException {
+    for (int level = 0; level < tableMatrix.length; level++) {
+      for (int number = 0; number < tableMatrix[level].length; number++) {
+        SSTableReader ssTableReader = tableMatrix[level][number];
+        if (ssTableReader != null) {
+          ssTableReader.close();
+        }
+      }
+    }
+  }
 }

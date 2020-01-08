@@ -78,7 +78,16 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
   }
 
   @Override
-  public byte[] get(String collection, byte[] key) {
+  public Operation getOperation(String collection, byte[] key) {
+    MapEntry mapEntry = getMapEntry(collection, key);
+    if (mapEntry == null) {
+      missed++;
+      return null;
+    }
+    return mapEntry.operation;
+  }
+
+  private MapEntry getMapEntry(String collection, byte[] key) {
     checkCollectionName(collection);
     MapKey prefixedKey = MapKey.buildPrefixedKey(collection, key);
 
@@ -86,6 +95,12 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
       return null;
     }
     MapEntry mapEntry = map.get(prefixedKey);
+    return mapEntry;
+  }
+
+  @Override
+  public byte[] get(String collection, byte[] key) {
+    MapEntry mapEntry = getMapEntry(collection, key);
     if (mapEntry == null) {
       missed++;
       return null;
@@ -175,4 +190,5 @@ public class SortedMemoryTable implements MemoryTable, Iterable<Entry> {
   public void setLastVLogEntry(VLogEntryInfo lastVLogEntry) {
     this.lastVLogEntry = lastVLogEntry;
   }
+
 }

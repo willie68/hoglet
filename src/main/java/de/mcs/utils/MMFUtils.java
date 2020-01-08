@@ -21,15 +21,22 @@ public class MMFUtils {
   private MMFUtils() {
   }
 
+  private static boolean systemCapableOfUnmapMMF = false;
+  private static boolean initialised = false;
+
   public static boolean isSystemCapableOfUnmapMMF() throws FileNotFoundException, IOException {
-    File file = File.createTempFile("test", ".mmf");
-    file.deleteOnExit();
-    try (RandomAccessFile f = new RandomAccessFile(file, "rw")) {
-      try (FileChannel channel = f.getChannel()) {
-        MappedByteBuffer bb = channel.map(MapMode.READ_WRITE, 0, 1);
-        return unMapBuffer(bb, channel.getClass());
+    if (!initialised) {
+      File file = File.createTempFile("test", ".mmf");
+      file.deleteOnExit();
+      try (RandomAccessFile f = new RandomAccessFile(file, "rw")) {
+        try (FileChannel channel = f.getChannel()) {
+          MappedByteBuffer bb = channel.map(MapMode.READ_WRITE, 0, 1);
+          systemCapableOfUnmapMMF = unMapBuffer(bb, channel.getClass());
+        }
       }
+      initialised = true;
     }
+    return systemCapableOfUnmapMMF;
   }
 
   public static boolean unMapBuffer(MappedByteBuffer buffer, Class channelClass) {

@@ -79,7 +79,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   private FileChannel fileChannel;
   private int[] indexList;
   private MapKey[] mapkeyList;
-  private MappedByteBuffer mmfBuffer;
+  private MappedByteBuffer mmfBuffer = null;
   ReentrantLock readLock;
   private DatabaseUtils databaseUtils;
   private SSTStatus sstStatus;
@@ -284,9 +284,15 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
 
   @Override
   public void close() throws IOException {
-    MMFUtils.unMapBuffer(mmfBuffer, fileChannel.getClass());
-    fileChannel.close();
-    raf.close();
+    if (mmfBuffer != null) {
+      MMFUtils.unMapBuffer(mmfBuffer, fileChannel.getClass());
+    }
+    if ((fileChannel != null) && fileChannel.isOpen()) {
+      fileChannel.close();
+    }
+    if (raf != null) {
+      raf.close();
+    }
   }
 
   @Override

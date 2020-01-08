@@ -345,11 +345,19 @@ public class HogletDB implements Closeable {
 
   private boolean containsKey(String collection, byte[] key) {
     if (memoryTable.containsKey(collection, key)) {
+      Operation operation = memoryTable.getOperation(collection, key);
+      if (Operation.DELETE.equals(operation)) {
+        return false;
+      }
       return true;
     }
     immutableTableLock.lock();
     try {
       if ((immutableTable != null) && immutableTable.containsKey(collection, key)) {
+        Operation operation = immutableTable.getOperation(collection, key);
+        if (Operation.DELETE.equals(operation)) {
+          return false;
+        }
         return true;
       }
     } finally {
@@ -360,7 +368,11 @@ public class HogletDB implements Closeable {
       SSTableReader ssTableReader = iterator.next();
       MapKey mapkey = MapKey.buildPrefixedKey(collection, key);
       try {
-        if (ssTableReader.contains(mapkey)) {
+        Entry entry = ssTableReader.get(mapkey);
+        if (entry != null) {
+          if (Operation.DELETE.equals(entry.getOperation())) {
+            return false;
+          }
           return true;
         }
       } catch (IOException | SSTException e) {
@@ -429,32 +441,41 @@ public class HogletDB implements Closeable {
         operation = Operation.ADD_DIRECT;
       }
       VLogEntryInfo info = vLog.put(collection, key, 0, value, operation);
-      if (memoryTable.isAvailbleForWriting()) {
-        return memoryTable.add(collection, key, operation, info.asJson().getBytes(StandardCharsets.UTF_8));
-      }
-
-      int count = 0;
-      while ((immutableTable != null) && (count < 1000)) {
-        // wait for writing of table...
-        try {
-          Thread.sleep(10);
-        } catch (Exception e) {
-        }
-        count++;
-      }
-      if (immutableTable != null) {
-        throw new HogletDBException("can't add value to db. db not ready...");
-      }
-
-      immutableTable = memoryTable;
-      immutableTable.setLastVLogEntry(info);
-      memoryTable = getNewMemoryTable();
-      eventBus.post(new WriteImmutableTableEvent());
-
-      return memoryTable.add(collection, key, operation, info.asJson().getBytes(StandardCharsets.UTF_8));
+      return putToMemoryTable(collection, key, operation, info);
     } catch (IOException e) {
       throw new HogletDBException(e);
     }
+  }
+
+  private byte[] putToMemoryTable(String collection, byte[] key, Operation operation, VLogEntryInfo info)
+      throws HogletDBException {
+    byte[] tableValue = new byte[0];
+    if (info != null) {
+      tableValue = info.asJson().getBytes(StandardCharsets.UTF_8);
+    }
+    if (memoryTable.isAvailbleForWriting()) {
+      return memoryTable.add(collection, key, operation, tableValue);
+    }
+
+    int count = 0;
+    while ((immutableTable != null) && (count < 1000)) {
+      // wait for writing of table...
+      try {
+        Thread.sleep(10);
+      } catch (Exception e) {
+      }
+      count++;
+    }
+    if (immutableTable != null) {
+      throw new HogletDBException("can't add value to db. db not ready...");
+    }
+
+    immutableTable = memoryTable;
+    immutableTable.setLastVLogEntry(info);
+    memoryTable = getNewMemoryTable();
+    eventBus.post(new WriteImmutableTableEvent());
+
+    return memoryTable.add(collection, key, operation, tableValue);
   }
 
   private byte[] removeKey(String collection, byte[] key) throws HogletDBException {
@@ -474,8 +495,16 @@ public class HogletDB implements Closeable {
         throw new HogletDBException(e);
       }
     } else {
-      memoryTable.add(collection, key, Operation.DELETE, new byte[0]);
-      return null;
+      try {
+        VLog vLog = vLogList.getNextAvailableVLog();
+        // log.debug("putting into vlog file %s", vLog.getName());
+        Operation operation = Operation.DELETE;
+        byte[] value = new byte[0];
+        VLogEntryInfo info = vLog.put(collection, key, 0, value, operation);
+        return putToMemoryTable(collection, key, operation, info);
+      } catch (IOException e) {
+        throw new HogletDBException(e);
+      }
     }
   }
 
@@ -523,6 +552,11 @@ public class HogletDB implements Closeable {
       }
     }
     vLogList.close();
+    try {
+      ssTableManager.close();
+    } catch (IOException e) {
+      throw new HogletDBException(e);
+    }
   }
 
   public InputStream getAsStream(String collection, byte[] key) throws HogletDBException {
