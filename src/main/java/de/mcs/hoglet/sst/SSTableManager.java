@@ -29,6 +29,7 @@ import java.util.ListIterator;
 
 import com.google.common.eventbus.EventBus;
 
+import de.mcs.hoglet.HogletDB;
 import de.mcs.hoglet.HogletDBException;
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.event.CompactLevelEventListener;
@@ -44,9 +45,11 @@ public class SSTableManager {
 
   /**
    * creating a new SSTable manager with the desired options
-   * @param options the hoglet db options to use
+   * 
+   * @param options
+   *          the hoglet db options to use
    * @return a initialised table manager
-   * @throws HogletDBException 
+   * @throws HogletDBException
    */
   public static SSTableManager newSSTableManager(Options options, DatabaseUtils databaseUtils)
       throws HogletDBException {
@@ -60,6 +63,7 @@ public class SSTableManager {
   private SSTableReader[][] tableMatrix;
   private DatabaseUtils databaseUtils;
   private EventBus eventBus;
+  private HogletDB hogletDB;
 
   private SSTableManager() {
   }
@@ -94,15 +98,17 @@ public class SSTableManager {
   }
 
   /**
-   * @param options the options to set
+   * @param options
+   *          the options to set
    */
   public void setOptions(Options options) {
     this.options = options;
   }
 
   /**
-   * @param options the options to set
-   * @return 
+   * @param options
+   *          the options to set
+   * @return
    */
   public SSTableManager withOptions(Options options) {
     this.setOptions(options);
@@ -111,6 +117,7 @@ public class SSTableManager {
 
   /**
    * getting the newest sstable reader for the newest sst file
+   * 
    * @return the newest sstablereader
    */
   public SSTableReader getNewestSST() {
@@ -126,7 +133,8 @@ public class SSTableManager {
   }
 
   /**
-   * getting an iterator over all sst files, ordered by creation 
+   * getting an iterator over all sst files, ordered by creation
+   * 
    * @return ListIterator<SSTableReader>
    */
   public ListIterator<SSTableReader> iteratorInCreationOrder() {
@@ -144,6 +152,7 @@ public class SSTableManager {
 
   /**
    * getting the next number of the sstable file
+   * 
    * @param level
    * @return
    */
@@ -165,14 +174,16 @@ public class SSTableManager {
   }
 
   /**
-   * @param databaseUtils the databaseUtils to set
+   * @param databaseUtils
+   *          the databaseUtils to set
    */
   public void setDatabaseUtils(DatabaseUtils databaseUtils) {
     this.databaseUtils = databaseUtils;
   }
 
   /**
-   * @param databaseUtils the databaseUtils to set
+   * @param databaseUtils
+   *          the databaseUtils to set
    */
   private SSTableManager withDatabaseUtils(DatabaseUtils databaseUtils) {
     this.setDatabaseUtils(databaseUtils);
@@ -180,10 +191,15 @@ public class SSTableManager {
   }
 
   /**
-   * writing out the memory table to the next level 0 sst file. If this is the 10's file, the compact event for level 0 will be thrown.
-   * @param immutableTable the memeory table to write out
-   * @throws IOException if something goes wrong on the file syytem
-   * @throws SSTException if something goes wrong in the sst structure
+   * writing out the memory table to the next level 0 sst file. If this is the 10's file, the compact event for level 0
+   * will be thrown.
+   * 
+   * @param immutableTable
+   *          the memeory table to write out
+   * @throws IOException
+   *           if something goes wrong on the file syytem
+   * @throws SSTException
+   *           if something goes wrong in the sst structure
    */
   public void writeMemoryTable(MemoryTable immutableTable) throws IOException, SSTException {
     int number = getNextTableNumber(0);
@@ -230,7 +246,8 @@ public class SSTableManager {
   }
 
   /**
-   * @param eventBus the eventBus to set
+   * @param eventBus
+   *          the eventBus to set
    */
   public void setEventBus(EventBus eventBus) {
     this.eventBus = eventBus;
@@ -240,7 +257,8 @@ public class SSTableManager {
     log.info("compacting level " + level);
     final int nextLevel = level + 1;
     int number = getNextTableNumber(nextLevel);
-    SSTCompacter compacter = SSTCompacter.newCompacter(options).withReadingLevel(level).withWritingNumber(number);
+    SSTCompacter compacter = SSTCompacter.newCompacter(options).withReadingLevel(level).withWritingNumber(number)
+        .withHogletDB(hogletDB);
     try {
       List<String> tableNames = compacter.start();
       SSTableReader reader = SSTableReaderFactory.getReader(options, nextLevel, number);
@@ -284,5 +302,10 @@ public class SSTableManager {
         }
       }
     }
+  }
+
+  public SSTableManager withHogletDB(HogletDB hogletDB) {
+    this.hogletDB = hogletDB;
+    return this;
   }
 }

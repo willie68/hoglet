@@ -6,6 +6,7 @@ package de.mcs.hoglet.sst;
 import java.io.IOException;
 import java.util.List;
 
+import de.mcs.hoglet.HogletDB;
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.sst.SortedReaderQueue.QueuedReaderEntry;
 import de.mcs.utils.logging.Logger;
@@ -24,6 +25,7 @@ public class SSTCompacter {
   private int readingLevel;
   private int writingNumber;
   private Logger log = Logger.getLogger(this.getClass());
+  private HogletDB hogletDB;
 
   public SSTCompacter(Options options) {
     this.options = options;
@@ -39,6 +41,11 @@ public class SSTCompacter {
     return this;
   }
 
+  public SSTCompacter withHogletDB(HogletDB hogletDB) {
+    this.hogletDB = hogletDB;
+    return this;
+  }
+
   public List<String> start() throws IOException, SSTException {
     // open all sst files from reading readingLevel
     try (SortedReaderQueue queue = SortedReaderQueue.newSortedReaderQueue(options).withReadingLevel(readingLevel)
@@ -49,7 +56,10 @@ public class SSTCompacter {
         while (queue.isAvailable()) {
           QueuedReaderEntry entry = queue.getNextEntry();
           if (entry != null) {
-            writer.write(entry.getEntry());
+            MapKey mapKey = entry.getEntry().getKey();
+            if (!hogletDB.containsKeyUptoSST(mapKey.getCollection(), mapKey.getKey(), entry.getSstIdentity())) {
+              writer.write(entry.getEntry());
+            }
           }
         }
         writer.setLastVLogEntry(queue.getLastVLogEntry());

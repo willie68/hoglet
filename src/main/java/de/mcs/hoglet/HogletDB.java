@@ -50,6 +50,7 @@ import de.mcs.hoglet.sst.Entry;
 import de.mcs.hoglet.sst.MapKey;
 import de.mcs.hoglet.sst.MemoryTable;
 import de.mcs.hoglet.sst.SSTException;
+import de.mcs.hoglet.sst.SSTIdentity;
 import de.mcs.hoglet.sst.SSTableManager;
 import de.mcs.hoglet.sst.SSTableReader;
 import de.mcs.hoglet.sst.SortedMemoryTable;
@@ -169,7 +170,7 @@ public class HogletDB implements Closeable {
   }
 
   private void initSSTManager() throws HogletDBException {
-    ssTableManager = SSTableManager.newSSTableManager(options, databaseUtils).withEventBus(eventBus);
+    ssTableManager = SSTableManager.newSSTableManager(options, databaseUtils).withEventBus(eventBus).withHogletDB(this);
   }
 
   private void replayVlog() throws HogletDBException {
@@ -382,6 +383,45 @@ public class HogletDB implements Closeable {
     return false;
   }
 
+  public boolean containsKeyUptoSST(String collection, byte[] key, SSTIdentity sstIdentity) {
+    int maxLevel = Integer.MAX_VALUE;
+    int maxNumber = Integer.MAX_VALUE;
+    if (sstIdentity != null) {
+      maxLevel = sstIdentity.getLevel();
+      maxNumber = sstIdentity.getNumber();
+    }
+
+    if (memoryTable.containsKey(collection, key)) {
+      return true;
+    }
+    immutableTableLock.lock();
+    try {
+      if ((immutableTable != null) && immutableTable.containsKey(collection, key)) {
+        return true;
+      }
+    } finally {
+      immutableTableLock.unlock();
+    }
+
+    for (ListIterator<SSTableReader> iterator = ssTableManager.iteratorInCreationOrder(); iterator.hasNext();) {
+      SSTableReader ssTableReader = iterator.next();
+      SSTIdentity readerIdentity = ssTableReader.getSSTIdentity();
+      if ((readerIdentity.getLevel() < maxLevel)
+          || ((readerIdentity.getLevel() == maxLevel) && (readerIdentity.getNumber() < maxNumber))) {
+        MapKey mapkey = MapKey.buildPrefixedKey(collection, key);
+        try {
+          Entry entry = ssTableReader.get(mapkey);
+          if (entry != null) {
+            return true;
+          }
+        } catch (IOException | SSTException e) {
+          log.error("Error in SSTable", e);
+        }
+      }
+    }
+    return false;
+  }
+
   private byte[] getKey(String collection, byte[] key) throws HogletDBException {
     byte[] bs = memoryTable.get(collection, key);
     if (bs == null) {
@@ -586,4 +626,5 @@ public class HogletDB implements Closeable {
       log.error("error writing immutable table", e);
     }
   }
+
 }

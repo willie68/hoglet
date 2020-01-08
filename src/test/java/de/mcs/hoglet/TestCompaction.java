@@ -24,7 +24,7 @@ class TestCompaction {
 
   private static final int MAX_DOC_COUNT = 30000;
   private static final int DELETE_DOC_COUNT = MAX_DOC_COUNT / 3;
-  private static final int MEM_TABLE_MAX_KEYS = 1000;
+  private static final int MEM_TABLE_MAX_KEYS = 100;
   private static File dbFolder;
   private static QueuedIDGenerator ids;
   private static List<byte[]> keys;
@@ -198,7 +198,7 @@ class TestCompaction {
       for (byte[] key : delKeys) {
         hogletDB.remove(key);
         count++;
-        int percent = (count * 100) / keys.size();
+        int percent = (count * 100) / delKeys.size();
         if (percent != savePercent) {
           System.out.printf("%d %% Percent done.\r\n", percent);
           savePercent = percent;
@@ -209,6 +209,7 @@ class TestCompaction {
       count = 0;
       savePercent = 0;
       for (byte[] key : delKeys) {
+        boolean test = hogletDB.contains(key);
         assertFalse(hogletDB.contains(key));
         count++;
         int percent = (count * 100) / keys.size();
