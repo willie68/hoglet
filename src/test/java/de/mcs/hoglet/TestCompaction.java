@@ -1,6 +1,8 @@
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,7 +54,7 @@ class TestCompaction {
     new Random(System.currentTimeMillis()).nextBytes(value);
 
     try (HogletDB hogletDB = new HogletDB(Options.defaultOptions().withPath(dbFolder.getAbsolutePath())
-        .withLvlTableCount(5).withMemTableMaxKeys(MEM_TABLE_MAX_KEYS))) {
+        .withLvlTableCount(5).withMemTableMaxKeys(MEM_TABLE_MAX_KEYS).withInsertWaitTime(10 * 60 * 1000))) {
 
       assertFalse(hogletDB.isReadonly());
       int savePercent = 0;
@@ -104,8 +106,54 @@ class TestCompaction {
         }
       }
 
-      System.out.println("ready, waiting for new SST file");
+      System.out.println("deleting keys.");
+      List<byte[]> delKeys = new ArrayList<>();
+      List<byte[]> myKeys = new ArrayList<>();
+      myKeys.addAll(keys);
+      for (int i = 0; i < DELETE_DOC_COUNT; i++) {
+        byte[] bs = myKeys.remove(0);
+        delKeys.add(bs);
+      }
+      count = 0;
+      savePercent = 0;
+      for (byte[] key : delKeys) {
+        hogletDB.remove(key);
+        count++;
+        int percent = (count * 100) / delKeys.size();
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
+        }
+      }
+
+      System.out.println("testing deleted keys.");
+      count = 0;
+      savePercent = 0;
+      for (byte[] key : delKeys) {
+        boolean test = hogletDB.contains(key);
+        assertFalse(hogletDB.contains(key), "missing del key number " + count);
+        count++;
+        int percent = (count * 100) / keys.size();
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
+        }
+      }
+
+      System.out.println("testing not deleted keys.");
+      count = 0;
+      savePercent = 0;
+      for (byte[] key : myKeys) {
+        assertTrue(hogletDB.contains(key));
+        count++;
+        int percent = (count * 100) / keys.size();
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
+        }
+      }
     }
+    System.out.println("ready, waiting for new SST file");
 
     List<byte[]> myKeys = new ArrayList<>();
     myKeys.addAll(keys);

@@ -497,14 +497,13 @@ public class HogletDB implements Closeable {
       return memoryTable.add(collection, key, operation, tableValue);
     }
 
-    int count = 0;
-    while ((immutableTable != null) && (count < 1000)) {
+    long endTime = System.currentTimeMillis() + options.getInsertWaitTime();
+    while ((immutableTable != null) && (endTime >= System.currentTimeMillis())) {
       // wait for writing of table...
       try {
         Thread.sleep(10);
       } catch (Exception e) {
       }
-      count++;
     }
     if (immutableTable != null) {
       throw new HogletDBException("can't add value to db. db not ready...");

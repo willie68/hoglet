@@ -46,6 +46,7 @@ public class Options {
         .withVlogMaxSize(100 * 1024 * 1024)
         .withVlogMaxFileCount(10)
         .withChunkSize(1024 * 1024)
+        .withInsertWaitTime(10000)
         .withMemTableMaxKeys(100000)
         .withMemTableMaxSize(64 * 1024 * 1024)
         .withMemActiveBloomFilter(true)
@@ -74,6 +75,11 @@ public class Options {
    * blobs will be chuncked with this size. Defualt value is 1MB.
    */
   private int chunkSize;
+
+  /**
+   * inserting a new key will wait max this in msec, until throwing a database not ready exceptionD
+   */
+  private int insertWaitTime;
 
   /**
    * how much is the delete treshhold
@@ -617,6 +623,29 @@ public class Options {
    */
   public Options withDirectValueTreshHold(int directValueTreshHold) {
     this.setDirectValueTreshHold(directValueTreshHold);
+    return this;
+  }
+
+  /**
+   * @return the insertWaitTime
+   */
+  public int getInsertWaitTime() {
+    return insertWaitTime;
+  }
+
+  /**
+   * @param insertWaitTime the insertWaitTime to set
+   */
+  public void setInsertWaitTime(int insertWaitTime) {
+    this.insertWaitTime = insertWaitTime;
+  }
+
+  /**
+   * @param insertWaitTime the insertWaitTime to set
+   * @return 
+   */
+  public Options withInsertWaitTime(int insertWaitTime) {
+    this.setInsertWaitTime(insertWaitTime);
     return this;
   }
 }
