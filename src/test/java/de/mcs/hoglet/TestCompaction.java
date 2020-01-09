@@ -3,7 +3,10 @@ package de.mcs.hoglet;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -15,9 +18,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
+import de.mcs.hoglet.sst.SSTException;
+import de.mcs.hoglet.utils.SSTExporter;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
-import de.mcs.utils.QueuedIDGenerator;
+import de.mcs.utils.ByteArrayUtils;
 import de.mcs.utils.SystemTestFolderHelper;
 
 class TestCompaction {
@@ -26,16 +31,17 @@ class TestCompaction {
   private static final int DELETE_DOC_COUNT = MAX_DOC_COUNT / 3;
   private static final int MEM_TABLE_MAX_KEYS = 100;
   private static File dbFolder;
-  private static QueuedIDGenerator ids;
   private static List<byte[]> keys;
+  private static int number;
 
   @BeforeAll
   public static void beforeAll() throws IOException, InterruptedException {
     SystemTestFolderHelper.initStatistics();
-    ids = new QueuedIDGenerator(1000);
     Thread.sleep(1000);
-
     dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
+    options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withLvlTableCount(5)
+        .withMemTableMaxKeys(MEM_TABLE_MAX_KEYS).withInsertWaitTime(10 * 60 * 1000);
+    number = 0;
   }
 
   @AfterAll
@@ -45,6 +51,7 @@ class TestCompaction {
 
   private List<byte[]> delKeys;
   private List<byte[]> presentKeys;
+  private static Options options;
 
   @Order(1)
   @Test
@@ -56,8 +63,7 @@ class TestCompaction {
     byte[] value = new byte[1024];
     new Random(System.currentTimeMillis()).nextBytes(value);
 
-    try (HogletDB hogletDB = new HogletDB(Options.defaultOptions().withPath(dbFolder.getAbsolutePath())
-        .withLvlTableCount(5).withMemTableMaxKeys(MEM_TABLE_MAX_KEYS).withInsertWaitTime(10 * 60 * 1000))) {
+    try (HogletDB hogletDB = new HogletDB(options)) {
 
       assertFalse(hogletDB.isReadonly());
       int savePercent = 0;
@@ -65,7 +71,7 @@ class TestCompaction {
       System.out.println("adding keys.");
 
       for (int i = 0; i < MAX_DOC_COUNT; i++) {
-        byte[] key = ids.getByteID();
+        byte[] key = ByteArrayUtils.longToBytes(i);
         keys.add(key);
         if (isOdd(key[0])) {
           hogletDB.put(key, key);
@@ -85,6 +91,7 @@ class TestCompaction {
           savePercent = percent;
         }
       }
+      export();
 
       System.out.println("testing keys in order.");
       int count = 0;
@@ -127,12 +134,15 @@ class TestCompaction {
         }
       }
 
+      export();
+
       System.out.println("testing deleted keys.");
       count = 0;
       savePercent = 0;
       for (byte[] key : delKeys) {
         boolean test = hogletDB.contains(key);
-        assertFalse(hogletDB.contains(key), "missing del key number " + count);
+        assertFalse(hogletDB.contains(key),
+            String.format("missing del key number %d, key: %s", count, ByteArrayUtils.bytesAsHexString(key)));
         count++;
         int percent = (count * 100) / keys.size();
         if (percent != savePercent) {
@@ -217,7 +227,7 @@ class TestCompaction {
       System.out.println("testing non imported keys");
       for (int i = 0; i < MAX_DOC_COUNT; i++) {
 
-        byte[] key = ids.getByteID();
+        byte[] key = ByteArrayUtils.longToBytes(i + MAX_DOC_COUNT);
 
         Monitor m = MeasureFactory.start(this, "notContainingContains");
         boolean contains = hogletDB.contains(key);
@@ -295,6 +305,31 @@ class TestCompaction {
         }
       }
     }
+  }
+
+  private void export() {
+
+    File exportFile = new File(dbFolder, String.format("sst_exp_%d.txt", number));
+
+    try {
+      SSTExporter exporter = new SSTExporter(options);
+      try (OutputStream out = new FileOutputStream(exportFile)) {
+        exporter.export(out);
+      }
+    } catch (SSTException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (HogletDBException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (FileNotFoundException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    number++;
   }
 
   public static boolean isOdd(int i) {

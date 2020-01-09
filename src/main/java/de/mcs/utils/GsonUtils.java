@@ -35,6 +35,7 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
  * @author w.klaas
@@ -59,7 +60,10 @@ public class GsonUtils {
 
   public static Gson getJsonMapper() {
     if (gson == null) {
-      gson = new Gson();
+      GsonBuilder gsonBuilder = new GsonBuilder();
+      gsonBuilder.registerTypeAdapter(byte[].class, new JsonByteArraySerializer());
+
+      gson = gsonBuilder.create();
       // jsonObjectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
       // jsonObjectMapper.configure(SerializationFeature.WRITE_NULL_MAP_VALUES, false);
       // jsonObjectMapper.setSerializationInclusion(Include.NON_NULL);

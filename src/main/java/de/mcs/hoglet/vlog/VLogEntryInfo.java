@@ -18,7 +18,6 @@
  */
 package de.mcs.hoglet.vlog;
 
-import de.mcs.utils.ByteArrayUtils;
 import de.mcs.utils.GsonUtils;
 
 /**
@@ -50,9 +49,9 @@ public class VLogEntryInfo {
   long start;
   long startBinary;
   long end;
-  String hash;
+  byte[] hash;
   String vLogName;
-  String value;
+  byte[] value;
 
   /**
    * @return the start
@@ -72,12 +71,7 @@ public class VLogEntryInfo {
    * @return the hash
    */
   public byte[] getHash() {
-    try {
-      return ByteArrayUtils.decodeHex(hash);
-    } catch (Exception e) {
-      // DONE should never occure
-    }
-    return null;
+    return hash;
   }
 
   public int getBinarySize() {
@@ -130,7 +124,7 @@ public class VLogEntryInfo {
    * @return
    */
   public void setHash(byte[] hash) {
-    this.hash = ByteArrayUtils.bytesAsHexString(hash);
+    this.hash = hash;
   }
 
   /**
@@ -210,12 +204,7 @@ public class VLogEntryInfo {
    * @return the value
    */
   public byte[] getValue() {
-    try {
-      return ByteArrayUtils.decodeHex(value);
-    } catch (Exception e) {
-      // DONE should never occure
-    }
-    return null;
+    return value;
   }
 
   /**
@@ -223,7 +212,7 @@ public class VLogEntryInfo {
    *          the value to set
    */
   public void setValue(byte[] value) {
-    this.value = ByteArrayUtils.bytesAsHexString(value);
+    this.value = value;
   }
 
   /**

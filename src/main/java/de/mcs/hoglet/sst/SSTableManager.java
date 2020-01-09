@@ -133,14 +133,14 @@ public class SSTableManager {
   }
 
   /**
-   * getting an iterator over all sst files, ordered by creation
+   * getting an iterator over all sst files, ordered by creation, newest to latest
    * 
    * @return ListIterator<SSTableReader>
    */
   public ListIterator<SSTableReader> iteratorInCreationOrder() {
     List<SSTableReader> list = new ArrayList<>();
     for (int level = 0; level < tableMatrix.length; level++) {
-      for (int number = 0; number < tableMatrix[level].length; number++) {
+      for (int number = tableMatrix[level].length - 1; number >= 0; number--) {
         SSTableReader ssTableReader = tableMatrix[level][number];
         if (ssTableReader != null) {
           list.add(ssTableReader);

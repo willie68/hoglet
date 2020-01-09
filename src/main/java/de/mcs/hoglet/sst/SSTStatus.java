@@ -24,7 +24,6 @@ package de.mcs.hoglet.sst;
 import java.util.Date;
 
 import de.mcs.hoglet.vlog.VLogEntryInfo;
-import de.mcs.utils.ByteArrayUtils;
 import de.mcs.utils.GsonUtils;
 
 /**
@@ -35,7 +34,7 @@ import de.mcs.utils.GsonUtils;
  */
 public class SSTStatus {
 
-  private String bloomfilter;
+  private byte[] bloomfilter;
   private long chunkCount;
   private long createdAt;
   private VLogEntryInfo lastVLogEntry;
@@ -44,12 +43,7 @@ public class SSTStatus {
    * @return the bloomfilter
    */
   public byte[] getBloomfilter() {
-    try {
-      return ByteArrayUtils.decodeHex(bloomfilter);
-    } catch (Exception e) {
-      // DONE should never occure
-    }
-    return null;
+    return bloomfilter;
   }
 
   /**
@@ -57,7 +51,7 @@ public class SSTStatus {
    *          the bloomfilter to set
    */
   public void setBloomfilter(byte[] bloomfilter) {
-    this.bloomfilter = ByteArrayUtils.bytesAsHexString(bloomfilter);
+    this.bloomfilter = bloomfilter;
   }
 
   /**
