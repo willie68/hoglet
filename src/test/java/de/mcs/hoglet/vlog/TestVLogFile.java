@@ -217,7 +217,7 @@ class TestVLogFile {
         VLogEntryInfo vLogEntryInfo = myMap.get(key);
         assertNotNull(vLogEntryInfo);
         assertEquals(vLogEntryInfo.end, type.end);
-        assertEquals(vLogEntryInfo.hash, ByteArrayUtils.bytesAsHexString(type.hash));
+        assertEquals(ByteArrayUtils.bytesAsHexString(vLogEntryInfo.hash), ByteArrayUtils.bytesAsHexString(type.hash));
         assertEquals(vLogEntryInfo.start, type.start);
         assertEquals(vLogEntryInfo.startBinary, type.startBinary);
         assertEquals(1, type.chunkNumber);
@@ -270,7 +270,7 @@ class TestVLogFile {
     VLogDescriptor descriptor = VLogDescriptor.fromBytes(out.toByteArray());
     assertEquals(info.getBinarySize(), descriptor.length);
     assertEquals(buffer.length, descriptor.length);
-    assertEquals(info.hash, descriptor.getHashAsString());
+    assertEquals(ByteArrayUtils.bytesAsHexString(info.hash), descriptor.getHashAsString());
     assertEquals(ByteArrayUtils.bytesAsHexString(byteId), ByteArrayUtils.bytesAsHexString(descriptor.key));
     assertEquals(COLLECTION, new String(descriptor.collectionBytes, StandardCharsets.UTF_8));
     assertEquals(1, descriptor.chunkNumber);
@@ -286,7 +286,7 @@ class TestVLogFile {
     assertNotNull(description);
     assertEquals(info.getBinarySize(), descriptor.getLength());
     assertEquals(buffer.length, descriptor.getLength());
-    assertEquals(info.hash, descriptor.getHashAsString());
+    assertEquals(ByteArrayUtils.bytesAsHexString(info.hash), descriptor.getHashAsString());
     assertEquals(ByteArrayUtils.bytesAsHexString(byteId), ByteArrayUtils.bytesAsHexString(descriptor.getKey()));
     assertEquals(COLLECTION, new String(descriptor.collectionBytes, StandardCharsets.UTF_8));
     assertEquals(1, descriptor.getChunkNumber());

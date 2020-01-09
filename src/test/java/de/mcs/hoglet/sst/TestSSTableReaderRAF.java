@@ -30,6 +30,7 @@ import de.mcs.utils.SystemTestFolderHelper;
 
 class TestSSTableReaderRAF {
 
+  private static final int MAX_DOC_TEST = 100;
   private static final int MAX_KEYS = 64000;
   private static SortedMemoryTable table;
   private static IDGenerator ids;
@@ -129,8 +130,9 @@ class TestSSTableReaderRAF {
     System.out.println("SSTableReader: check containing");
     Random rnd = new Random(System.currentTimeMillis());
     long countExisting = 0;
+    int savePercent = 0;
     try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, number)) {
-      for (int i = 0; i < 1000; i++) {
+      for (int i = 0; i < MAX_DOC_TEST; i++) {
         boolean existing = rnd.nextBoolean();
         if (existing) {
           int index = rnd.nextInt(keys.size());
@@ -157,9 +159,14 @@ class TestSSTableReaderRAF {
 
           Monitor m = MeasureFactory.start("SSTableReaderRAF.notContain");
           if (reader.mightContain(mapKey)) {
-            reader.contains(mapKey);
+            assertFalse(reader.contains(mapKey));
           }
           m.stop();
+        }
+        int percent = (i * 100) / MAX_DOC_TEST;
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
         }
       }
     }

@@ -152,6 +152,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     if (mightContain(mapKey)) {
       int count = 0;
       long startPosition = 0;
+      Monitor m1 = MeasureFactory.start(this, "getPosition");
       for (int i = 0; i < indexList.length; i++) {
         if (indexList[i] == 0) {
           break;
@@ -160,12 +161,16 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
           startPosition = indexList[i];
         }
       }
+      m1.stop();
       readLock.lock();
       try {
         fileChannel.position(startPosition);
         while ((fileChannel.position() < fileChannel.size()) && (fileChannel.position() < endOfSST)) {
           long savePosition = fileChannel.position();
+          MeasureFactory.getMeasurePoint(this.getClass().getName() + "#countRead").increaseCount();
+          Monitor m = MeasureFactory.start(this, "readNextEntry");
           Entry entry = read();
+          m.stop();
           int index = Math.round((count * CACHE_SIZE) / chunkCount);
           if (indexList[index] == 0) {
             indexList[index] = savePosition;

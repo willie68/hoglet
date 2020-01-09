@@ -169,7 +169,9 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
         mmfBuffer.position(startPosition);
         while ((mmfBuffer.position() < mmfBuffer.limit()) && (mmfBuffer.position() < endOfSST)) {
           int savePosition = mmfBuffer.position();
+          Monitor m = MeasureFactory.start(this, "readNextEntry");
           Entry entry = read();
+          m.stop();
           int index = Math.round((count * CACHE_SIZE) / chunkCount);
           if (indexList[index] == 0) {
             indexList[index] = savePosition;
