@@ -1,8 +1,6 @@
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,10 +43,15 @@ class TestCompaction {
     SystemTestFolderHelper.outputStatistics();
   }
 
+  private List<byte[]> delKeys;
+  private List<byte[]> presentKeys;
+
   @Order(1)
   @Test
   public void testCompacting() throws IOException {
     keys = new ArrayList<>();
+    delKeys = new ArrayList<>();
+    presentKeys = new ArrayList<>();
 
     byte[] value = new byte[1024];
     new Random(System.currentTimeMillis()).nextBytes(value);
@@ -107,11 +110,9 @@ class TestCompaction {
       }
 
       System.out.println("deleting keys.");
-      List<byte[]> delKeys = new ArrayList<>();
-      List<byte[]> myKeys = new ArrayList<>();
-      myKeys.addAll(keys);
+      presentKeys.addAll(keys);
       for (int i = 0; i < DELETE_DOC_COUNT; i++) {
-        byte[] bs = myKeys.remove(0);
+        byte[] bs = presentKeys.remove(0);
         delKeys.add(bs);
       }
       count = 0;
@@ -143,7 +144,7 @@ class TestCompaction {
       System.out.println("testing not deleted keys.");
       count = 0;
       savePercent = 0;
-      for (byte[] key : myKeys) {
+      for (byte[] key : presentKeys) {
         assertTrue(hogletDB.contains(key));
         count++;
         int percent = (count * 100) / keys.size();
@@ -156,7 +157,7 @@ class TestCompaction {
     System.out.println("ready, waiting for new SST file");
 
     List<byte[]> myKeys = new ArrayList<>();
-    myKeys.addAll(keys);
+    myKeys.addAll(presentKeys);
     System.out.println("shufffle keys");
     Collections.shuffle(myKeys);
 
@@ -192,6 +193,20 @@ class TestCompaction {
         // if ((count % 100) == 0) {
         // System.out.print(".");
         // }
+        int percent = (count * 100) / keys.size();
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
+        }
+      }
+
+      System.out.println("testing deleted keys.");
+      count = 0;
+      savePercent = 0;
+      for (byte[] key : delKeys) {
+        boolean test = hogletDB.contains(key);
+        assertFalse(hogletDB.contains(key), "missing del key number " + count);
+        count++;
         int percent = (count * 100) / keys.size();
         if (percent != savePercent) {
           System.out.printf("%d %% Percent done.\r\n", percent);

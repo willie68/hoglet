@@ -18,6 +18,7 @@
  */
 package de.mcs.hoglet.vlog;
 
+import de.mcs.hoglet.Operation;
 import de.mcs.utils.GsonUtils;
 
 /**
@@ -35,6 +36,7 @@ public class VLogEntryDescription {
   long end;
   byte[] hash;
   long length;
+  Operation operation;
 
   /**
    * @return the start
@@ -118,6 +120,13 @@ public class VLogEntryDescription {
    */
   public long getLength() {
     return length;
+  }
+
+  /**
+   * @return the operation
+   */
+  public Operation getOperation() {
+    return operation;
   }
 
 }

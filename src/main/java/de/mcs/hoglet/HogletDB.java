@@ -215,7 +215,7 @@ public class HogletDB implements Closeable {
               VLogEntryInfo info = VLogEntryInfo.newVLogEntryInfo().withStart(entry.getStart())
                   .withHash(entry.getHash()).withStartBinary(entry.getStartBinary()).withEnd(entry.getEnd())
                   .withVLogName(entry.getContainerName());
-              memoryTable.add(entry.getCollection(), entry.getKey(), Operation.ADD,
+              memoryTable.add(entry.getCollection(), entry.getKey(), entry.getOperation(),
                   info.asJson().getBytes(StandardCharsets.UTF_8));
             } else {
               first = false;

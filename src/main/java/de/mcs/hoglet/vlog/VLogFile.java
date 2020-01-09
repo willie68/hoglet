@@ -285,6 +285,7 @@ public class VLogFile implements Closeable {
               info.start = start;
               info.startBinary = position;
               info.startDescription = startDescription;
+              info.operation = descriptor.operation;
               entryInfos.add(info);
 
               long bytesToSkip = descriptor.length;

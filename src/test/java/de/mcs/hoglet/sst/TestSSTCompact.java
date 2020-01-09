@@ -6,6 +6,8 @@ package de.mcs.hoglet.sst;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,9 +18,12 @@ import java.util.Random;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockitoAnnotations;
 
+import de.mcs.hoglet.HogletDB;
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.utils.DatabaseUtils;
@@ -41,6 +46,12 @@ class TestSSTCompact {
   private File dbFolder;
   private Options options;
   private boolean useBaseFolder = false;
+  private HogletDB hogletDB;
+
+  @BeforeAll
+  static void beforeAll() {
+    MockitoAnnotations.initMocks(TestSSTCompact.class);
+  }
 
   /**
    * @throws java.lang.Exception
@@ -52,6 +63,8 @@ class TestSSTCompact {
         .withUseOnlyBaseFolder(useBaseFolder).getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(MAX_KEYS);
     ids = new QueuedIDGenerator(10000);
+    hogletDB = mock(HogletDB.class);
+    when(hogletDB.containsKeyUptoSST(anyString(), any(), any())).thenReturn(false);
   }
 
   /**
@@ -86,7 +99,11 @@ class TestSSTCompact {
         int value = rnd.nextInt(keys.size());
         byte[] key = keys.remove(value);
         Monitor m = MeasureFactory.start("SortedMemoryTable.add");
-        table.add(collection, key, Operation.ADD, key);
+        if (isOdd(key[key.length - 1])) {
+          table.add(collection, key, Operation.ADD, key);
+        } else {
+          table.add(collection, key, Operation.DELETE, key);
+        }
         m.stop();
       }
 
@@ -107,7 +124,8 @@ class TestSSTCompact {
     }
 
     System.out.println("start compacting");
-    SSTCompacter compacter = SSTCompacter.newCompacter(options).withReadingLevel(1).withWritingNumber(1);
+    SSTCompacter compacter = SSTCompacter.newCompacter(options).withReadingLevel(1).withWritingNumber(1)
+        .withHogletDB(hogletDB);
     compacter.start();
 
     DatabaseUtils dbUtils = DatabaseUtils.newDatabaseUtils(options);
@@ -127,9 +145,18 @@ class TestSSTCompact {
           assertTrue(key.equals(entry.getKey()));
           assertEquals(collection, entry.getKey().getCollection());
           assertTrue(Arrays.equals(key.getKeyBytes(), entry.getValue()));
+          if (isOdd(bs[bs.length - 1])) {
+            assertTrue(Operation.ADD.equals(entry.getOperation()));
+          } else {
+            assertTrue(Operation.DELETE.equals(entry.getOperation()));
+          }
         }
       }
     }
+  }
+
+  public static boolean isOdd(int i) {
+    return (i & 1) != 0;
   }
 
 }
