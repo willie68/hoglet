@@ -29,6 +29,7 @@ import de.mcs.hoglet.Options;
 import de.mcs.hoglet.event.CompactLevelEventListener;
 import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.hoglet.utils.SSTUtils;
+import de.mcs.utils.Files;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -279,6 +280,10 @@ public class SSTableManager {
           File file = new File(options.getPath(), name);
           if (file.exists()) {
             file.delete();
+          }
+          File idxFile = Files.changeExtension(file, ".idx");
+          if (idxFile.exists()) {
+            idxFile.delete();
           }
         } catch (IOException e) {
           log.error("error closing sstable", e);

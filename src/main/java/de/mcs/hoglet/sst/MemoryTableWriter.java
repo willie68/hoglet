@@ -100,6 +100,13 @@ public class MemoryTableWriter implements Closeable {
     if (sstFile.exists()) {
       throw new SSTException(String.format("sst file for level %d number %d already exists.", level, number));
     }
+    File idxFile = DatabaseUtils.getSSTIndexFilePath(new File(options.getPath()), level, number);
+    if (idxFile.exists()) {
+      if (!idxFile.delete()) {
+        throw new SSTException(
+            String.format("idx file for level %d number %d already exists and can't be deleted.", level, number));
+      }
+    }
 
     raf = new RandomAccessFile(sstFile, "rw");
     raf.setLength(options.getVlogMaxSize());
