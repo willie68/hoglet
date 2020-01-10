@@ -18,6 +18,8 @@
  */
 package de.mcs.hoglet.vlog;
 
+import java.nio.charset.StandardCharsets;
+
 import de.mcs.utils.GsonUtils;
 
 /**
@@ -33,8 +35,8 @@ public class VLogEntryInfo {
    *          the json representation
    * @return VLogEntryInfo
    */
-  public static VLogEntryInfo fromJson(String json) {
-    return GsonUtils.getJsonMapper().fromJson(json, VLogEntryInfo.class);
+  public static VLogEntryInfo fromBytes(byte[] json) {
+    return GsonUtils.getJsonMapper().fromJson(new String(json, StandardCharsets.UTF_8), VLogEntryInfo.class);
   }
 
   /**
@@ -147,8 +149,8 @@ public class VLogEntryInfo {
    * 
    * @return String
    */
-  public String asJson() {
-    return GsonUtils.getJsonMapper().toJson(this);
+  public byte[] asBytes() {
+    return GsonUtils.getJsonMapper().toJson(this).getBytes(StandardCharsets.UTF_8);
   }
 
   /**

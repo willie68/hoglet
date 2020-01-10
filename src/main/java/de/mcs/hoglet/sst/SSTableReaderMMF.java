@@ -1,4 +1,19 @@
 /**
+ * Copyright 2019 w.klaas
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
  * 
  */
 package de.mcs.hoglet.sst;
@@ -79,6 +94,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   private FileChannel fileChannel;
   private int[] indexList;
   private MapKey[] mapkeyList;
+  private long missedKeys;
   private MappedByteBuffer mmfBuffer = null;
   ReentrantLock readLock;
   private DatabaseUtils databaseUtils;
@@ -94,6 +110,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     this.mapkeyList = new MapKey[CACHE_SIZE];
     Arrays.fill(this.indexList, 0);
     this.chunkCount = 0;
+    this.missedKeys = 0;
     this.readLock = new ReentrantLock();
     this.sstIdentity = SSTIdentity.newSSTIdentity().withNumber(number).withLevel(level);
     init();
@@ -273,12 +290,14 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
               return entry;
             }
             if (compareTo > 0) {
+              missedKeys++;
               return null;
             }
           }
         } finally {
           m.stop();
         }
+        missedKeys++;
       } finally {
         readLock.unlock();
       }
@@ -317,6 +336,11 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   @Override
   public SSTIdentity getSSTIdentity() {
     return sstIdentity;
+  }
+
+  @Override
+  public long getMissed() {
+    return missedKeys;
   }
 
 }
