@@ -78,6 +78,7 @@ public class SystemTestFolderHelper {
       }
     }
     dbFolder.mkdirs();
+    System.out.println("Using folder: " + dbFolder.getAbsolutePath());
     return dbFolder;
   }
 

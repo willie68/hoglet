@@ -57,7 +57,7 @@ public class Options {
     return new Options().withVCntCompressAge(0)
         .withVCntDeleteTreshHold(10)
         .withVLogAge(1 * 60 * 60 * 1000)
-        .withVlogMaxChunkCount(100000)
+        .withVlogMaxChunkCount(1000000)
         .withVlogMaxSize(100 * 1024 * 1024)
         .withVlogMaxFileCount(10)
         .withChunkSize(1024 * 1024)
@@ -68,6 +68,7 @@ public class Options {
         .withLvlTableCount(10)
         .withSSTReadStrategy(SSTReadStrategy.MMF)
         .withSSTMaxLevels(10)
+        .withSstIndexPreload(true)
         .withDirectValueTreshHold(128);
     // @formatter:on
   }
@@ -184,6 +185,11 @@ public class Options {
    * if the size of value is beneth this value, the value will be stored directly into the string table.
    */
   private int directValueTreshHold;
+
+  /**
+   * preload the index table on opening the sst file. Beware of this.
+   */
+  private boolean sstIndexPreload;
 
   /**
    * @return the vCntDeleteTreshHold
@@ -649,18 +655,41 @@ public class Options {
   }
 
   /**
-   * @param insertWaitTime the insertWaitTime to set
+   * @param insertWaitTime
+   *          the insertWaitTime to set
    */
   public void setInsertWaitTime(int insertWaitTime) {
     this.insertWaitTime = insertWaitTime;
   }
 
   /**
-   * @param insertWaitTime the insertWaitTime to set
-   * @return 
+   * @param insertWaitTime
+   *          the insertWaitTime to set
+   * @return
    */
   public Options withInsertWaitTime(int insertWaitTime) {
     this.setInsertWaitTime(insertWaitTime);
     return this;
   }
+
+  public Options withSstIndexPreload(boolean preload) {
+    this.setSstIndexPreload(preload);
+    return this;
+  }
+
+  /**
+   * @return the sstIndexPreload
+   */
+  public boolean isSstIndexPreload() {
+    return sstIndexPreload;
+  }
+
+  /**
+   * @param sstIndexPreload
+   *          the sstIndexPreload to set
+   */
+  public void setSstIndexPreload(boolean sstIndexPreload) {
+    this.sstIndexPreload = sstIndexPreload;
+  }
+
 }

@@ -18,9 +18,8 @@
  */
 package de.mcs.hoglet.vlog;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-
-import de.mcs.utils.GsonUtils;
 
 /**
  * @author w.klaas
@@ -36,7 +35,31 @@ public class VLogEntryInfo {
    * @return VLogEntryInfo
    */
   public static VLogEntryInfo fromBytes(byte[] json) {
-    return GsonUtils.getJsonMapper().fromJson(new String(json, StandardCharsets.UTF_8), VLogEntryInfo.class);
+    ByteBuffer bs = ByteBuffer.wrap(json);
+    VLogEntryInfo vLogEntryInfo = new VLogEntryInfo();
+    vLogEntryInfo.setEnd(bs.getLong());
+
+    int length = bs.getInt();
+    byte[] hash = new byte[length];
+    bs.get(hash);
+    vLogEntryInfo.setHash(hash);
+
+    vLogEntryInfo.setStart(bs.getLong());
+    vLogEntryInfo.setStartBinary(bs.getLong());
+
+    length = bs.getInt();
+    byte[] vLogNameBytes = new byte[length];
+    bs.get(vLogNameBytes);
+    vLogEntryInfo.setvLogName(new String(vLogNameBytes, StandardCharsets.UTF_8));
+
+    length = bs.getInt();
+    if (length > 0) {
+      byte[] value = new byte[length];
+      bs.get(value);
+      vLogEntryInfo.setValue(value);
+    }
+    return vLogEntryInfo;
+    // return GsonUtils.getJsonMapper().fromJson(new String(json, StandardCharsets.UTF_8), VLogEntryInfo.class);
   }
 
   /**
@@ -150,7 +173,32 @@ public class VLogEntryInfo {
    * @return String
    */
   public byte[] asBytes() {
-    return GsonUtils.getJsonMapper().toJson(this).getBytes(StandardCharsets.UTF_8);
+    ByteBuffer bs = ByteBuffer.allocate(1024);
+
+    bs.putLong(end);
+
+    bs.putInt(hash.length);
+    bs.put(hash);
+
+    bs.putLong(start);
+
+    bs.putLong(startBinary);
+
+    byte[] vLogNameBytes = vLogName.getBytes(StandardCharsets.UTF_8);
+    bs.putInt(vLogNameBytes.length);
+    bs.put(vLogNameBytes);
+
+    if (value == null) {
+      bs.putInt(0);
+    } else {
+      bs.putInt(value.length);
+      bs.put(value);
+    }
+
+    bs.flip();
+    byte[] ba = new byte[bs.remaining()];
+    bs.get(ba);
+    return ba;
   }
 
   /**

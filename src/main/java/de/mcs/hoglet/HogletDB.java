@@ -30,7 +30,6 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -73,8 +72,6 @@ public class HogletDB implements Closeable {
   private Logger log = Logger.getLogger(this.getClass());
   private static final String DEFAULT_COLLECTION = "default";
   private Options options;
-  // TODO remove map implementation
-  private HashMap<String, byte[]> map;
 
   private VLogList vLogList;
   private MemoryTable memoryTable;
@@ -625,4 +622,7 @@ public class HogletDB implements Closeable {
     }
   }
 
+  SSTableManager getSSTableManager() {
+    return ssTableManager;
+  }
 }

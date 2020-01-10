@@ -112,6 +112,7 @@ class TestCompaction {
       int count = 0;
       for (byte[] key : keys) {
 
+        boolean found = hogletDB.contains(key);
         assertTrue(hogletDB.contains(key));
 
         byte[] storedValue = hogletDB.get(key);

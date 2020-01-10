@@ -32,6 +32,8 @@ public class SSTStatus {
   private long chunkCount;
   private long createdAt;
   private VLogEntryInfo lastVLogEntry;
+  private int[] indexList;
+  private MapKey[] mapkeyList;
 
   /**
    * @return the bloomfilter

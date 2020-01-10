@@ -39,14 +39,16 @@ import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
+import de.mcs.utils.ByteArrayUtils;
 import de.mcs.utils.IDGenerator;
 import de.mcs.utils.QueuedIDGenerator;
 import de.mcs.utils.SystemTestFolderHelper;
 
 class TestSSTableReaderRAF {
 
-  private static final int MAX_DOC_TEST = 100;
+  private static final int MAX_DOC_TEST = 1000;
   private static final int MAX_KEYS = 64000;
+  private static final int MAX_KEYS_BIG = 1000000;
   private static SortedMemoryTable table;
   private static IDGenerator ids;
   private static File dbFolder;
@@ -122,9 +124,13 @@ class TestSSTableReaderRAF {
       }
     });
 
-    Monitor mOpen = MeasureFactory.start("SSTableReaderRAF.open");
+    Monitor mOpen = MeasureFactory.start(this, "open");
     try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, number)) {
       mOpen.stop();
+      SSTIdentity sstIdentity = reader.getSSTIdentity();
+      assertNotNull(sstIdentity);
+      assertEquals(level, sstIdentity.getLevel());
+      assertEquals(number, sstIdentity.getNumber());
 
       VLogEntryInfo lastVLogEntry = reader.getLastVLogEntry();
       assertEquals(lastEntry.getEnd(), lastVLogEntry.getEnd());
@@ -132,7 +138,7 @@ class TestSSTableReaderRAF {
       assertEquals(DatabaseUtils.getSSTFileName(level, number), reader.getTableName());
       for (byte[] cs : keys) {
         MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
-        Monitor m = MeasureFactory.start("SSTableReaderRAF.mightContain");
+        Monitor m = MeasureFactory.start(this, "mightContain");
         assertTrue(reader.mightContain(mapKey));
         m.stop();
       }
@@ -154,15 +160,15 @@ class TestSSTableReaderRAF {
           byte[] cs = keys.get(index);
           MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
 
-          Monitor m = MeasureFactory.start("SSTableReaderRAF.mightContain");
+          Monitor m = MeasureFactory.start(this, "mightContain");
           assertTrue(reader.mightContain(mapKey));
           m.stop();
 
-          m = MeasureFactory.start("SSTableReaderRAF.contain");
+          m = MeasureFactory.start(this, "contain");
           assertTrue(reader.contains(mapKey));
           m.stop();
 
-          m = MeasureFactory.start("SSTableReaderRAF.get");
+          m = MeasureFactory.start(this, "get");
           Entry entry = reader.get(mapKey);
           m.stop();
           assertNotNull(entry);
@@ -172,7 +178,7 @@ class TestSSTableReaderRAF {
 
           MapKey mapKey = MapKey.buildPrefixedKey(collection, ids.getByteID());
 
-          Monitor m = MeasureFactory.start("SSTableReaderRAF.notContain");
+          Monitor m = MeasureFactory.start(this, "notContain");
           if (reader.mightContain(mapKey)) {
             assertFalse(reader.contains(mapKey));
           }
@@ -184,6 +190,7 @@ class TestSSTableReaderRAF {
           savePercent = percent;
         }
       }
+      assertEquals(0, reader.getMissed());
     }
   }
 
@@ -214,6 +221,21 @@ class TestSSTableReaderRAF {
     }
   }
 
+  @Order(4)
+  @Test
+  public void testNonExistingKeys() throws IOException, SSTException {
+    System.out.println("SSTableReader: check non existing keys");
+
+    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, number)) {
+      for (int i = 0; i < 100; i++) {
+        byte[] key = ids.getByteID();
+        MapKey mapKey = MapKey.buildPrefixedKey(collection, key);
+        assertFalse(reader.contains(mapKey));
+        assertNull(reader.get(mapKey));
+      }
+    }
+  }
+
   @Test
   public void testLevelNumber() {
     Assertions.assertThrows(SSTException.class, () -> {
@@ -230,5 +252,82 @@ class TestSSTableReaderRAF {
     Assertions.assertThrows(SSTException.class, () -> {
       new SSTableReaderRAF(options, 2, 2);
     });
+  }
+
+  @Test
+  void testBigFile() throws IOException, SSTException {
+    System.out.println("creating key/values");
+    int savePercent = 0;
+
+    List<byte[]> myKeys = new ArrayList<>();
+    VLogEntryInfo lastEntry = VLogEntryInfo.newVLogEntryInfo().withEnd(12345);
+    for (int i = 0; i < MAX_KEYS_BIG; i++) {
+      byte[] key = ByteArrayUtils.longToBytes(i);
+      myKeys.add(key);
+    }
+
+    myKeys.sort(new Comparator<byte[]>() {
+      @Override
+      public int compare(byte[] o1, byte[] o2) {
+        return Arrays.compare(o1, o2);
+      }
+    });
+
+    int bigLevel = 1;
+    int bigNumber = 4;
+    System.out.println("start writing SST");
+    try (MemoryTableWriter writer = new MemoryTableWriter(options, bigLevel, bigNumber)) {
+      int count = 0;
+      for (byte[] cs : myKeys) {
+        MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
+        Entry entry = new Entry().withKey(mapKey).withOperation(Operation.ADD).withValue(cs);
+        writer.write(entry);
+        int percent = (count * 100) / MAX_KEYS_BIG;
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
+        }
+        count++;
+      }
+      writer.setLastVLogEntry(lastEntry);
+      System.out.println("checking bloomfilter of writer.");
+    }
+
+    System.out.println("checking SST");
+
+    Monitor mOpen = MeasureFactory.start(this, "bigfile.open");
+    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, bigLevel, bigNumber)) {
+      mOpen.stop();
+      SSTIdentity sstIdentity = reader.getSSTIdentity();
+      assertNotNull(sstIdentity);
+      assertEquals(bigLevel, sstIdentity.getLevel());
+      assertEquals(bigNumber, sstIdentity.getNumber());
+
+      VLogEntryInfo lastVLogEntry = reader.getLastVLogEntry();
+      assertEquals(lastEntry.getEnd(), lastVLogEntry.getEnd());
+
+      assertEquals(DatabaseUtils.getSSTFileName(bigLevel, bigNumber), reader.getTableName());
+      Random rnd = new Random(System.currentTimeMillis());
+      int count = 1000;
+      while (count > 0) {
+        byte[] cs = myKeys.get(rnd.nextInt(myKeys.size()));
+        MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
+
+        Monitor m = MeasureFactory.start(this, "bigfile.mightContain");
+        assertTrue(reader.mightContain(mapKey));
+        m.stop();
+
+        m = MeasureFactory.start(this, "bigfile.contain");
+        assertTrue(reader.contains(mapKey), String.format("on key: %d", ByteArrayUtils.bytesToLong(cs)));
+        m.stop();
+
+        int percent = (count * 100) / MAX_KEYS_BIG;
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
+        }
+        count--;
+      }
+    }
   }
 }

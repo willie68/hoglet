@@ -28,7 +28,8 @@ import java.nio.CharBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -81,7 +82,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     }
   }
 
-  private static final int CACHE_SIZE = 100;
+  private static final int CACHE_SIZE = 1000;
   private Logger log = Logger.getLogger(this.getClass());
   private Options options;
   private int level;
@@ -92,8 +93,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   private File sstFile;
   private RandomAccessFile raf;
   private FileChannel fileChannel;
-  private int[] indexList;
-  private MapKey[] mapkeyList;
+  private SSTableIndex tableIndex;
   private long missedKeys;
   private MappedByteBuffer mmfBuffer = null;
   ReentrantLock readLock;
@@ -101,14 +101,16 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   private SSTStatus sstStatus;
   private long endOfSST;
   private SSTIdentity sstIdentity;
+  private long keyCount;
+  private int cacheSize;
 
   public SSTableReaderMMF(Options options, int level, int number) throws SSTException, IOException {
+    keyCount = ((long) Math.pow(options.getLvlTableCount(), level + 1)) * options.getMemTableMaxKeys();
+    cacheSize = (int) Math.max(100, keyCount / 100);
+    cacheSize = (int) Math.min(keyCount / 100, CACHE_SIZE);
     this.options = options;
     this.level = level;
     this.number = number;
-    this.indexList = new int[CACHE_SIZE];
-    this.mapkeyList = new MapKey[CACHE_SIZE];
-    Arrays.fill(this.indexList, 0);
     this.chunkCount = 0;
     this.missedKeys = 0;
     this.readLock = new ReentrantLock();
@@ -124,7 +126,6 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
       throw new SSTException("number should be greater than 0");
     }
     MapKeyFunnel funnel = new MapKeyFunnel();
-    long keyCount = ((long) Math.pow(options.getLvlTableCount(), level - 1)) * options.getMemTableMaxKeys();
     bloomfilter = BloomFilter.create(funnel, keyCount, 0.01);
 
     databaseUtils = DatabaseUtils.newDatabaseUtils(options);
@@ -134,7 +135,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
 
   private void openSSTable() throws SSTException, IOException {
     filename = DatabaseUtils.getSSTFileName(level, number);
-    log.debug("reading sst file: %s", filename);
+    log.debug("reading sst file: %s, max keycount: %d, cachesize: %d", filename, keyCount, cacheSize);
 
     sstFile = databaseUtils.getSSTFilePath(level, number);
     if (!sstFile.exists()) {
@@ -142,8 +143,63 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     }
 
     raf = new RandomAccessFile(sstFile, "r");
-    raf.seek(raf.length() - 8);
     fileChannel = raf.getChannel();
+    raf.seek(raf.length() - 8);
+
+    initSSTStatus();
+
+    initBloomFilter();
+
+    fileChannel.position(0);
+    mmfBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, raf.length());
+
+    if (options.isSstIndexPreload()) {
+      preloadIndex();
+    }
+  }
+
+  private void preloadIndex() throws IOException, SSTException {
+    log.debug("preloading index");
+    File indexFile = databaseUtils.getSSTIndexFilePath(level, number);
+    if (indexFile.exists()) {
+      String json = Files.readString(indexFile.toPath(), StandardCharsets.UTF_8);
+      tableIndex = SSTableIndex.fromJson(json);
+    }
+    if (tableIndex == null) {
+      tableIndex = new SSTableIndex().withCacheSize(cacheSize);
+      int count = 0;
+      int startPosition = 0;
+      readLock.lock();
+      try {
+        mmfBuffer.position(startPosition);
+
+        Monitor m = MeasureFactory.start(this, "preloadIndex");
+        try {
+          while ((mmfBuffer.position() < mmfBuffer.limit()) && (mmfBuffer.position() < endOfSST)) {
+            int savePosition = mmfBuffer.position();
+            Entry entry = read();
+            int index = Math.round((count * cacheSize) / chunkCount);
+            if (!tableIndex.hasEntry(index)) {
+              tableIndex.setEntry(index, savePosition, entry.getKey());
+            }
+            count++;
+          }
+        } finally {
+          m.stop();
+        }
+      } finally {
+        readLock.unlock();
+      }
+      Files.writeString(indexFile.toPath(), tableIndex.toJson(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+    }
+  }
+
+  private void initBloomFilter() throws IOException {
+    MapKeyFunnel funnel = new MapKeyFunnel();
+    bloomfilter = BloomFilter.readFrom(new ByteArrayInputStream(sstStatus.getBloomfilter()), funnel);
+  }
+
+  private void initSSTStatus() throws IOException {
     ByteBuffer bb = ByteBuffer.allocate(8);
     fileChannel.read(bb);
     bb.rewind();
@@ -156,11 +212,6 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     CharBuffer json = StandardCharsets.UTF_8.decode(bb);
     sstStatus = SSTStatus.fromJson(json.toString());
     chunkCount = sstStatus.getChunkCount();
-
-    MapKeyFunnel funnel = new MapKeyFunnel();
-    bloomfilter = BloomFilter.readFrom(new ByteArrayInputStream(sstStatus.getBloomfilter()), funnel);
-    fileChannel.position(0);
-    mmfBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, raf.length());
   }
 
   @Override
@@ -170,119 +221,31 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
 
   @Override
   public boolean contains(MapKey mapKey) throws IOException, SSTException {
-    if (mightContain(mapKey)) {
-      int count = 0;
-      int startPosition = 0;
-      for (int i = 0; i < indexList.length; i++) {
-        if (indexList[i] == 0) {
-          break;
-        }
-        if (mapKey.compareTo(mapkeyList[i]) >= 0) {
-          startPosition = indexList[i];
-        }
-      }
-      readLock.lock();
-      try {
-        mmfBuffer.position(startPosition);
-        while ((mmfBuffer.position() < mmfBuffer.limit()) && (mmfBuffer.position() < endOfSST)) {
-          int savePosition = mmfBuffer.position();
-          Monitor m = MeasureFactory.start(this, "readNextEntry");
-          Entry entry = read();
-          m.stop();
-          int index = Math.round((count * CACHE_SIZE) / chunkCount);
-          if (indexList[index] == 0) {
-            indexList[index] = savePosition;
-            mapkeyList[index] = entry.getKey();
-          }
-          count++;
-          int compareTo = entry.getKey().compareTo(mapKey);
-          if (compareTo == 0) {
-            return true;
-          }
-          if (compareTo > 0) {
-            return false;
-          }
-        }
-      } finally {
-        readLock.unlock();
-      }
-    }
-    return false;
-  }
-
-  private PositionEntry read(int position) throws IOException, SSTException {
-    PositionEntry positionEntry = new PositionEntry();
-    positionEntry.position = position;
-    readLock.lock();
-    try {
-      mmfBuffer.position(positionEntry.position);
-      positionEntry.entry = read();
-      positionEntry.nextPosition = mmfBuffer.position();
-      return positionEntry;
-    } finally {
-      readLock.unlock();
-    }
-  }
-
-  private Entry read() throws IOException, SSTException {
-    byte entryStart = mmfBuffer.get();
-    if (MemoryTableWriter.ENTRY_START[0] != entryStart) {
-      throw new SSTException("error on sst file");
-    }
-    int entryLength = mmfBuffer.getInt();
-    int value = mmfBuffer.getInt();
-    byte[] mapkeyBytes = new byte[value];
-    mmfBuffer.get(mapkeyBytes);
-
-    MapKey mapKey = MapKey.wrap(mapkeyBytes);
-
-    byte entrySeperator = mmfBuffer.get();
-    if (MemoryTableWriter.ENTRY_SEPERATOR[0] != entrySeperator) {
-      throw new SSTException("error on sst file");
-    }
-    byte opByte = mmfBuffer.get();
-    Operation operation = Operation.values()[opByte];
-
-    entrySeperator = mmfBuffer.get();
-    if (MemoryTableWriter.ENTRY_SEPERATOR[0] != entrySeperator) {
-      throw new SSTException("error on sst file");
-    }
-    value = mmfBuffer.getInt();
-    byte[] valueBytes = new byte[value];
-    mmfBuffer.get(valueBytes);
-
-    return new Entry().withKey(mapKey).withValue(valueBytes).withOperation(operation);
+    return get(mapKey) != null;
   }
 
   @Override
   public Entry get(MapKey mapKey) throws IOException, SSTException {
     if (mightContain(mapKey)) {
       int count = 0;
-      int startPosition = 0;
-      Monitor m = MeasureFactory.start("SSTableReaderMMF#get.lookup");
-      for (int i = 0; i < indexList.length; i++) {
-        if (indexList[i] == 0) {
-          break;
-        }
-        if (mapKey.compareTo(mapkeyList[i]) >= 0) {
-          startPosition = indexList[i];
-        }
-      }
+      Monitor m = MeasureFactory.start(this, "get.lookup");
+      int startPosition = tableIndex.getStartPosition(mapKey);
       m.stop();
 
       readLock.lock();
       try {
         mmfBuffer.position(startPosition);
 
-        m = MeasureFactory.start("SSTableReaderMMF#get.scan");
+        m = MeasureFactory.start(this, "get.scan");
         try {
           while ((mmfBuffer.position() < mmfBuffer.limit()) && (mmfBuffer.position() < endOfSST)) {
             int savePosition = mmfBuffer.position();
             Entry entry = read();
-            int index = Math.round((count * CACHE_SIZE) / chunkCount);
-            if (indexList[index] == 0) {
-              indexList[index] = savePosition;
-              mapkeyList[index] = entry.getKey();
+            if (!options.isSstIndexPreload()) {
+              int index = Math.round((count * cacheSize) / chunkCount);
+              if (tableIndex.hasEntry(index)) {
+                tableIndex.setEntry(index, savePosition, entry.getKey());
+              }
             }
             count++;
             int compareTo = entry.getKey().compareTo(mapKey);
@@ -341,6 +304,50 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   @Override
   public long getMissed() {
     return missedKeys;
+  }
+
+  private PositionEntry read(int position) throws IOException, SSTException {
+    PositionEntry positionEntry = new PositionEntry();
+    positionEntry.position = position;
+    readLock.lock();
+    try {
+      mmfBuffer.position(positionEntry.position);
+      positionEntry.entry = read();
+      positionEntry.nextPosition = mmfBuffer.position();
+      return positionEntry;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  private Entry read() throws IOException, SSTException {
+    byte entryStart = mmfBuffer.get();
+    if (MemoryTableWriter.ENTRY_START[0] != entryStart) {
+      throw new SSTException("error on sst file");
+    }
+    int entryLength = mmfBuffer.getInt();
+    int value = mmfBuffer.getInt();
+    byte[] mapkeyBytes = new byte[value];
+    mmfBuffer.get(mapkeyBytes);
+
+    MapKey mapKey = MapKey.wrap(mapkeyBytes);
+
+    byte entrySeperator = mmfBuffer.get();
+    if (MemoryTableWriter.ENTRY_SEPERATOR[0] != entrySeperator) {
+      throw new SSTException("error on sst file");
+    }
+    byte opByte = mmfBuffer.get();
+    Operation operation = Operation.values()[opByte];
+
+    entrySeperator = mmfBuffer.get();
+    if (MemoryTableWriter.ENTRY_SEPERATOR[0] != entrySeperator) {
+      throw new SSTException("error on sst file");
+    }
+    value = mmfBuffer.getInt();
+    byte[] valueBytes = new byte[value];
+    mmfBuffer.get(valueBytes);
+
+    return new Entry().withKey(mapKey).withValue(valueBytes).withOperation(operation);
   }
 
 }

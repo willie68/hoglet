@@ -32,6 +32,7 @@ public class DatabaseUtils {
   private static final String VLOG_FILENAME_REGEX_NUMBER = "(.*)\\.vlog";
   private static final String SST_FILENAME_REGEX_NUMBER = "sst_%02d_(.*)\\.sst";
   private static final String SST_FILENAME_FORMAT = "sst_%02d_%02d.sst";
+  private static final String SST_INDEX_FILENAME_FORMAT = "sst_%02d_%02d.idx";
 
   public static DatabaseUtils newDatabaseUtils(Options options) {
     return new DatabaseUtils(options);
@@ -56,6 +57,10 @@ public class DatabaseUtils {
 
   public static File getSSTFilePath(File folder, int level, int number) {
     return new File(folder, String.format(SST_FILENAME_FORMAT, level, number));
+  }
+
+  public static File getSSTIndexFilePath(File folder, int level, int number) {
+    return new File(folder, String.format(SST_INDEX_FILENAME_FORMAT, level, number));
   }
 
   private Options options;
@@ -104,5 +109,10 @@ public class DatabaseUtils {
   public File getSSTFilePath(int level, int number) {
     File dbFolder = new File(options.getPath());
     return getSSTFilePath(dbFolder, level, number);
+  }
+
+  public File getSSTIndexFilePath(int level, int number) {
+    File dbFolder = new File(options.getPath());
+    return getSSTIndexFilePath(dbFolder, level, number);
   }
 }
