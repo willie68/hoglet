@@ -31,7 +31,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.hash.BloomFilter;
 
@@ -96,24 +98,24 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   private SSTableIndex tableIndex;
   private long missedKeys;
   private MappedByteBuffer mmfBuffer = null;
-  ReentrantLock readLock;
+  private ReadWriteLock readWriteLock;
   private DatabaseUtils databaseUtils;
   private SSTStatus sstStatus;
   private long endOfSST;
   private SSTIdentity sstIdentity;
   private long keyCount;
   private int cacheSize;
+  private File idxFile;
 
   public SSTableReaderMMF(Options options, int level, int number) throws SSTException, IOException {
     keyCount = ((long) Math.pow(options.getLvlTableCount(), level + 1)) * options.getMemTableMaxKeys();
-    cacheSize = (int) Math.max(100, keyCount / 100);
-    cacheSize = (int) Math.min(keyCount / 100, CACHE_SIZE);
+    cacheSize = SSTableIndex.calcCacheSize(keyCount);
     this.options = options;
     this.level = level;
     this.number = number;
     this.chunkCount = 0;
     this.missedKeys = 0;
-    this.readLock = new ReentrantLock();
+    this.readWriteLock = new ReentrantReadWriteLock();
     this.sstIdentity = SSTIdentity.newSSTIdentity().withNumber(number).withLevel(level);
     init();
   }
@@ -153,6 +155,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     fileChannel.position(0);
     mmfBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, raf.length());
 
+    idxFile = databaseUtils.getSSTIndexFilePath(level, number);
     if (options.isSstIndexPreload()) {
       preloadIndex();
     }
@@ -160,15 +163,15 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
 
   private void preloadIndex() throws IOException, SSTException {
     log.debug("preloading index");
-    File indexFile = databaseUtils.getSSTIndexFilePath(level, number);
-    if (indexFile.exists()) {
-      String json = Files.readString(indexFile.toPath(), StandardCharsets.UTF_8);
+    if (idxFile.exists()) {
+      String json = Files.readString(idxFile.toPath(), StandardCharsets.UTF_8);
       tableIndex = SSTableIndex.fromJson(json);
     }
     if (tableIndex == null) {
       tableIndex = new SSTableIndex().withCacheSize(cacheSize);
       int count = 0;
       int startPosition = 0;
+      Lock readLock = readWriteLock.readLock();
       readLock.lock();
       try {
         mmfBuffer.position(startPosition);
@@ -190,7 +193,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
       } finally {
         readLock.unlock();
       }
-      Files.writeString(indexFile.toPath(), tableIndex.toJson(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+      Files.writeString(idxFile.toPath(), tableIndex.toJson(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
     }
   }
 
@@ -232,6 +235,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
       int startPosition = tableIndex.getStartPosition(mapKey);
       m.stop();
 
+      Lock readLock = readWriteLock.readLock();
       readLock.lock();
       try {
         mmfBuffer.position(startPosition);
@@ -272,12 +276,15 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   public void close() throws IOException {
     if (mmfBuffer != null) {
       MMFUtils.unMapBuffer(mmfBuffer, fileChannel.getClass());
+      mmfBuffer = null;
     }
     if ((fileChannel != null) && fileChannel.isOpen()) {
       fileChannel.close();
+      fileChannel = null;
     }
     if (raf != null) {
       raf.close();
+      raf = null;
     }
   }
 
@@ -309,6 +316,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   private PositionEntry read(int position) throws IOException, SSTException {
     PositionEntry positionEntry = new PositionEntry();
     positionEntry.position = position;
+    Lock readLock = readWriteLock.readLock();
     readLock.lock();
     try {
       mmfBuffer.position(positionEntry.position);
@@ -350,4 +358,27 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     return new Entry().withKey(mapKey).withValue(valueBytes).withOperation(operation);
   }
 
+  @Override
+  public void deleteUnderlyingFile() throws SSTException {
+    if (raf == null) {
+      Lock writeLock = readWriteLock.writeLock();
+      writeLock.lock();
+      try {
+        if (sstFile.exists()) {
+          if (!sstFile.delete()) {
+            throw new SSTException(String.format("can't delete file: %s", sstFile.getName()));
+          }
+        }
+        if (idxFile.exists()) {
+          if (!idxFile.delete()) {
+            throw new SSTException(String.format("can't delete file: %s", idxFile.getName()));
+          }
+        }
+      } finally {
+        writeLock.unlock();
+      }
+    } else {
+      throw new SSTException(String.format("can't delete files, reader is open. Tablename: %s", getTableName()));
+    }
+  }
 }

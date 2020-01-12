@@ -1,6 +1,23 @@
+/**
+ * Copyright 2020 w.klaas
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.mcs.hoglet.sst;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -84,5 +101,16 @@ class TestSSTableIndex {
       int startPosition = index2.getStartPosition(key);
       assertEquals(i * 1024, index2.getStartPosition(key), "error on key " + i + " " + startPosition);
     }
+  }
+
+  @Test
+  void testCalcCacheSize() {
+    assertEquals(100, SSTableIndex.calcCacheSize(1000));
+    assertEquals(100, SSTableIndex.calcCacheSize(10000));
+    assertEquals(200, SSTableIndex.calcCacheSize(20000));
+    assertEquals(500, SSTableIndex.calcCacheSize(50000));
+    assertEquals(1000, SSTableIndex.calcCacheSize(100000));
+    assertEquals(1000, SSTableIndex.calcCacheSize(1000000));
+    assertEquals(1000, SSTableIndex.calcCacheSize(10000000));
   }
 }

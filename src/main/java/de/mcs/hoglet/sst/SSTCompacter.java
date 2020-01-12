@@ -41,6 +41,7 @@ public class SSTCompacter {
   private int writingNumber;
   private Logger log = Logger.getLogger(this.getClass());
   private HogletDB hogletDB;
+  private int ignored;
 
   public SSTCompacter(Options options) {
     this.options = options;
@@ -74,6 +75,8 @@ public class SSTCompacter {
             MapKey mapKey = entry.getEntry().getKey();
             if (!hogletDB.containsKeyUptoSST(mapKey.getCollection(), mapKey.getKey(), entry.getSstIdentity())) {
               writer.write(entry.getEntry());
+            } else {
+              ignored++;
             }
           }
         }
@@ -86,4 +89,7 @@ public class SSTCompacter {
     return null;
   }
 
+  public int getInored() {
+    return ignored;
+  }
 }

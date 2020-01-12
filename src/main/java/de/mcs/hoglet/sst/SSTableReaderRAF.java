@@ -80,7 +80,6 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     }
   }
 
-  private static final int CACHE_SIZE = 1000;
   private Logger log = Logger.getLogger(this.getClass());
   private Options options;
   private int level;
@@ -100,11 +99,11 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   private SSTIdentity sstIdentity;
   private long keyCount;
   private int cacheSize;
+  private File idxFile;
 
   public SSTableReaderRAF(Options options, int level, int number) throws SSTException, IOException {
     keyCount = ((long) Math.pow(options.getLvlTableCount(), level + 1)) * options.getMemTableMaxKeys();
-    cacheSize = (int) Math.max(100, keyCount / 100);
-    cacheSize = (int) Math.min(keyCount / 100, CACHE_SIZE);
+    cacheSize = SSTableIndex.calcCacheSize(keyCount);
     this.options = options;
     this.level = level;
     this.number = number;
@@ -146,6 +145,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
 
     initBloomFilter();
 
+    idxFile = databaseUtils.getSSTIndexFilePath(level, number);
     if (options.isSstIndexPreload()) {
       preloadIndex();
     }
@@ -155,9 +155,8 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
 
   private void preloadIndex() throws IOException, SSTException {
     log.debug("preloading index");
-    File indexFile = databaseUtils.getSSTIndexFilePath(level, number);
-    if (indexFile.exists()) {
-      String json = Files.readString(indexFile.toPath(), StandardCharsets.UTF_8);
+    if (idxFile.exists()) {
+      String json = Files.readString(idxFile.toPath(), StandardCharsets.UTF_8);
       tableIndex = SSTableIndex.fromJson(json);
     }
     if (tableIndex == null) {
@@ -185,7 +184,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
       } finally {
         readLock.unlock();
       }
-      Files.writeString(indexFile.toPath(), tableIndex.toJson(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+      Files.writeString(idxFile.toPath(), tableIndex.toJson(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
     }
   }
 
@@ -340,4 +339,21 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     return missedKeys;
   }
 
+  @Override
+  public void deleteUnderlyingFile() throws SSTException {
+    if (raf == null) {
+      if (sstFile.exists()) {
+        if (!sstFile.delete()) {
+          throw new SSTException(String.format("can't delete file: %s", sstFile.getName()));
+        }
+      }
+      if (idxFile.exists()) {
+        if (!idxFile.delete()) {
+          throw new SSTException(String.format("can't delete file: %s", idxFile.getName()));
+        }
+      }
+    } else {
+      throw new SSTException(String.format("can't delete files, reader is open. Tablename: %s", getTableName()));
+    }
+  }
 }

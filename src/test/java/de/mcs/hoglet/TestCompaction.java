@@ -15,7 +15,9 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -95,8 +97,12 @@ class TestCompaction {
         }
         assertTrue(hogletDB.contains(key));
 
-        // byte[] storedValue = hogletDB.get(key);
-        // assertTrue(Arrays.equals(key, storedValue));
+        byte[] storedValue = hogletDB.get(key);
+        if (isOdd(key[0])) {
+          assertTrue(Arrays.equals(key, storedValue));
+        } else {
+          assertTrue(Arrays.equals(value, storedValue));
+        }
         // if ((i % 100) == 0) {
         // System.out.print(".");
         // }
@@ -179,6 +185,34 @@ class TestCompaction {
           savePercent = percent;
         }
       }
+    
+      for (int i = MAX_DOC_COUNT; i < (MAX_DOC_COUNT*2); i++) {
+        byte[] key = ByteArrayUtils.longToBytes(i);
+        keys.add(key);
+        if (isOdd(key[0])) {
+          hogletDB.put(key, key);
+        } else {
+          hogletDB.put(key, value);
+        }
+        assertTrue(hogletDB.contains(key));
+
+        byte[] storedValue = hogletDB.get(key);
+        if (isOdd(key[0])) {
+          assertTrue(Arrays.equals(key, storedValue));
+        } else {
+          assertTrue(Arrays.equals(value, storedValue));
+        }
+        // if ((i % 100) == 0) {
+        // System.out.print(".");
+        // }
+        int percent = (i * 100) / MAX_DOC_COUNT;
+        if (percent != savePercent) {
+          System.out.printf("%d %% Percent done.\r\n", percent);
+          savePercent = percent;
+        }
+      }
+      export();
+
     }
     System.out.println("ready, waiting for new SST file");
 

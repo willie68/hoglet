@@ -97,4 +97,10 @@ public interface SSTableReader extends Closeable {
    * @return long
    */
   long getMissed();
+
+  /**
+   * deleting underlying sst files
+   * @throws SSTException
+   */
+  void deleteUnderlyingFile() throws SSTException;
 }

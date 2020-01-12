@@ -29,7 +29,6 @@ import de.mcs.hoglet.Options;
 import de.mcs.hoglet.event.CompactLevelEventListener;
 import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.hoglet.utils.SSTUtils;
-import de.mcs.utils.Files;
 import de.mcs.utils.logging.Logger;
 
 /**
@@ -59,6 +58,7 @@ public class SSTableManager {
   private DatabaseUtils databaseUtils;
   private EventBus eventBus;
   private HogletDB hogletDB;
+  private int ignored;
 
   private SSTableManager() {
   }
@@ -256,6 +256,8 @@ public class SSTableManager {
         .withHogletDB(hogletDB);
     try {
       List<String> tableNames = compacter.start();
+      log.debug(String.format("ignored keys: %d", compacter.getInored()));
+      ignored += compacter.getInored();
       SSTableReader reader = SSTableReaderFactory.getReader(options, nextLevel, number);
       tableMatrix[nextLevel][number] = reader;
 
@@ -277,15 +279,10 @@ public class SSTableManager {
         tableMatrix[level][i] = null;
         try {
           ssTableReader.close();
-          File file = new File(options.getPath(), name);
-          if (file.exists()) {
-            file.delete();
-          }
-          File idxFile = Files.changeExtension(file, ".idx");
-          if (idxFile.exists()) {
-            idxFile.delete();
-          }
+          ssTableReader.deleteUnderlyingFile();
         } catch (IOException e) {
+          log.error("error closing sstable", e);
+        } catch (SSTException e) {
           log.error("error closing sstable", e);
         }
       }
@@ -306,5 +303,9 @@ public class SSTableManager {
   public SSTableManager withHogletDB(HogletDB hogletDB) {
     this.hogletDB = hogletDB;
     return this;
+  }
+
+  public int getIgnored() {
+    return ignored;
   }
 }
