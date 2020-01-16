@@ -52,7 +52,8 @@ public class SSTUtils {
         } catch (IOException e) {
           e.printStackTrace();
         }
-      });
+      })
+      writer.writeIndexFile();
       return writer.getSstFile();
     }
   }

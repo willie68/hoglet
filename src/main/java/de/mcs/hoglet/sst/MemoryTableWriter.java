@@ -195,4 +195,8 @@ public class MemoryTableWriter implements Closeable {
     return sstFile;
   }
 
+  public void writeIndexFile() {
+
+  }
+
 }

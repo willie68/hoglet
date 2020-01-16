@@ -40,6 +40,7 @@ import de.mcs.hoglet.HogletDB;
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.utils.DatabaseUtils;
+import de.mcs.hoglet.utils.SSTUtils;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.ByteArrayUtils;
@@ -52,6 +53,7 @@ import de.mcs.utils.SystemTestFolderHelper;
  *
  */
 class TestSSTCompact {
+  private static final int MAX_DELTE_KEYS_ADD = 1000;
   private static final int MAX_KEYS = 10000;
   private static final int MAX_ROUNDS = 10;
 
@@ -93,7 +95,7 @@ class TestSSTCompact {
   }
 
   @Test
-  void test() throws Exception {
+  void testNormalComaption() throws Exception {
     String collection = "Default";
     List<byte[]> keys = new ArrayList<>();
     for (long x = 0; x < MAX_KEYS * MAX_ROUNDS; x++) {
@@ -166,6 +168,44 @@ class TestSSTCompact {
         }
       }
     }
+  }
+
+  @Test
+  void testDeleteComaption() throws Exception {
+    String collection = "Default";
+    List<byte[]> keys = new ArrayList<>();
+    for (long x = 0; x < 2 * MAX_DELTE_KEYS_ADD; x++) {
+      long nr = x;
+      byte[] key = ByteArrayUtils.longToBytes(nr);
+      keys.add(key);
+    }
+    options.setMemTableMaxKeys(MAX_DELTE_KEYS_ADD);
+
+    SortedMemoryTable table = new SortedMemoryTable(options);
+    for (int i = 0; i < MAX_DELTE_KEYS_ADD; i++) {
+      byte[] key = keys.get(i);
+      table.add(collection, key, Operation.ADD, key);
+    }
+    SSTUtils.writeMemoryTable(options, 0, table);
+
+    table = new SortedMemoryTable(options);
+    for (int i = 0; i < MAX_DELTE_KEYS_ADD; i++) {
+      byte[] key = keys.get(i + MAX_DELTE_KEYS_ADD);
+      table.add(collection, key, Operation.ADD, key);
+    }
+    SSTUtils.writeMemoryTable(options, 1, table);
+
+    System.out.println("start compacting");
+
+    SSTCompacter compacter = SSTCompacter.newCompacter(options).withReadingLevel(0).withWritingNumber(1)
+        .withHogletDB(hogletDB);
+    compacter.start();
+
+    DatabaseUtils dbUtils = DatabaseUtils.newDatabaseUtils(options);
+
+    assertEquals(2, dbUtils.getSSTFileCount(0));
+    assertEquals(1, dbUtils.getSSTFileCount(1));
+
   }
 
   public static boolean isOdd(int i) {

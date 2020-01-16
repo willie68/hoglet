@@ -15,9 +15,7 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -185,8 +183,8 @@ class TestCompaction {
           savePercent = percent;
         }
       }
-    
-      for (int i = MAX_DOC_COUNT; i < (MAX_DOC_COUNT*2); i++) {
+
+      for (int i = MAX_DOC_COUNT; i < (MAX_DOC_COUNT * 2); i++) {
         byte[] key = ByteArrayUtils.longToBytes(i);
         keys.add(key);
         if (isOdd(key[0])) {
@@ -265,7 +263,7 @@ class TestCompaction {
       savePercent = 0;
       for (byte[] key : delKeys) {
         boolean test = hogletDB.contains(key);
-        assertFalse(hogletDB.contains(key), "missing del key number " + count);
+        assertFalse(hogletDB.contains(key), "del key found, number " + count);
         count++;
         int percent = (count * 100) / keys.size();
         if (percent != savePercent) {
