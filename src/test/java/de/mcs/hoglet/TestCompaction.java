@@ -15,7 +15,9 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -55,7 +57,7 @@ class TestCompaction {
     Thread.sleep(1000);
     dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withLvlTableCount(5)
-        .withMemTableMaxKeys(MEM_TABLE_MAX_KEYS).withInsertWaitTime(10 * 60 * 1000);
+        .withMemTableMaxKeys(MEM_TABLE_MAX_KEYS);
     number = 0;
   }
 

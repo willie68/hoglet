@@ -53,7 +53,6 @@ public class SSTUtils {
           e.printStackTrace();
         }
       });
-      writer.writeIndexFile();
       return writer.getSstFile();
     }
   }

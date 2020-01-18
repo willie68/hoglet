@@ -104,8 +104,7 @@ class TestMemoryTableWriter {
     System.out.println("start writing SST");
 
     Monitor mOpen = MeasureFactory.start("MemoryTableWriter.open");
-    MemoryTableWriter writer = new MemoryTableWriter(options, level, count);
-    try {
+    try (MemoryTableWriter writer = new MemoryTableWriter(options, level, count)) {
       mOpen.stop();
 
       table.forEach(entry -> {
@@ -126,11 +125,7 @@ class TestMemoryTableWriter {
         m.stop();
       }
 
-    } finally {
-      writer.close();
     }
-
-    writer.writeIndexFile();
 
     File idxFile = DatabaseUtils.getSSTIndexFilePath(dbFolder, level, count);
     assertTrue(idxFile.exists());

@@ -173,6 +173,13 @@ public class MemoryTableWriter implements Closeable {
     fileChannel.force(true);
     fileChannel.close();
     raf.close();
+    try {
+      if (options.isSstIndexPreload()) {
+        writeIndexFile();
+      }
+    } catch (SSTException e) {
+      throw new IOException(e);
+    }
   }
 
   /**
@@ -197,7 +204,7 @@ public class MemoryTableWriter implements Closeable {
     return sstFile;
   }
 
-  public void writeIndexFile() throws IOException, SSTException {
+  private void writeIndexFile() throws IOException, SSTException {
     try (SSTableReader reader = SSTableReaderFactory.getReader(options, level, number)) {
       SSTableIndex tableIndex = reader.createIndex();
       File idxFile = reader.getIndexFile();
