@@ -23,6 +23,8 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.Date;
 
 import com.google.common.hash.BloomFilter;
@@ -49,7 +51,7 @@ public class MemoryTableWriter implements Closeable {
   private File sstFile;
   private RandomAccessFile raf;
   private FileChannel fileChannel;
-  private long chunkCount;
+  private long keyCount;
   private VLogEntryInfo lastVLogEntry;
 
   /**
@@ -85,7 +87,7 @@ public class MemoryTableWriter implements Closeable {
 
     createSSTable();
 
-    chunkCount = 0;
+    keyCount = 0;
   }
 
   /**
@@ -141,7 +143,7 @@ public class MemoryTableWriter implements Closeable {
     bb.flip();
 
     fileChannel.write(bb);
-    chunkCount++;
+    keyCount++;
   }
 
   public boolean mightContain(MapKey key) {
@@ -158,7 +160,7 @@ public class MemoryTableWriter implements Closeable {
     // writing the bloomfilter and some statistics at the end of the file
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     bloomfilter.writeTo(out);
-    SSTStatus sstStatus = new SSTStatus().withBloomfilter(out.toByteArray()).withChunkCount(chunkCount)
+    SSTStatus sstStatus = new SSTStatus().withBloomfilter(out.toByteArray()).withChunkCount(keyCount)
         .withCreatedAt(new Date()).withLastVLogEntry(lastVLogEntry);
     fileChannel.write(StandardCharsets.UTF_8.encode(sstStatus.toJson()));
     ByteBuffer bb = ByteBuffer.allocate(128);
@@ -195,8 +197,12 @@ public class MemoryTableWriter implements Closeable {
     return sstFile;
   }
 
-  public void writeIndexFile() {
-
+  public void writeIndexFile() throws IOException, SSTException {
+    try (SSTableReader reader = SSTableReaderFactory.getReader(options, level, number)) {
+      SSTableIndex tableIndex = reader.createIndex();
+      File idxFile = reader.getIndexFile();
+      Files.writeString(idxFile.toPath(), tableIndex.toJson(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+    }
   }
 
 }

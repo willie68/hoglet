@@ -19,6 +19,7 @@
 package de.mcs.hoglet.sst;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 
@@ -103,4 +104,18 @@ public interface SSTableReader extends Closeable {
    * @throws SSTException
    */
   void deleteUnderlyingFile() throws SSTException;
+
+  /**
+   * 
+   * @return the underlaying index file
+   */
+  File getIndexFile();
+
+  /**
+   * 
+   * @return a newly created table index
+   * @throws IOException
+   * @throws SSTException
+   */
+  SSTableIndex createIndex() throws IOException, SSTException;
 }

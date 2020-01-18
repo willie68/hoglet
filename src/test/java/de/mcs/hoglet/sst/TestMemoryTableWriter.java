@@ -15,7 +15,8 @@
  */
 package de.mcs.hoglet.sst;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.Test;
 
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
+import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.IDGenerator;
@@ -102,7 +104,8 @@ class TestMemoryTableWriter {
     System.out.println("start writing SST");
 
     Monitor mOpen = MeasureFactory.start("MemoryTableWriter.open");
-    try (MemoryTableWriter writer = new MemoryTableWriter(options, level, count)) {
+    MemoryTableWriter writer = new MemoryTableWriter(options, level, count);
+    try {
       mOpen.stop();
 
       table.forEach(entry -> {
@@ -114,6 +117,7 @@ class TestMemoryTableWriter {
         }
         m.stop();
       });
+
       System.out.println("checking bloomfilter of writer.");
       for (byte[] cs : keys) {
         MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
@@ -121,8 +125,15 @@ class TestMemoryTableWriter {
         assertTrue(writer.mightContain(mapKey));
         m.stop();
       }
+
+    } finally {
+      writer.close();
     }
 
+    writer.writeIndexFile();
+
+    File idxFile = DatabaseUtils.getSSTIndexFilePath(dbFolder, level, count);
+    assertTrue(idxFile.exists());
     System.out.println("checking SST");
 
     keys.sort(new Comparator<byte[]>() {

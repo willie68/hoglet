@@ -28,7 +28,6 @@ import java.nio.CharBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -147,14 +146,15 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
 
     idxFile = databaseUtils.getSSTIndexFilePath(level, number);
     if (options.isSstIndexPreload()) {
-      preloadIndex();
+      tableIndex = createIndex();
     }
 
     fileChannel.position(0);
   }
 
-  private void preloadIndex() throws IOException, SSTException {
+  public SSTableIndex createIndex() throws IOException, SSTException {
     log.debug("preloading index");
+    SSTableIndex tableIndex = null;
     if (idxFile.exists()) {
       String json = Files.readString(idxFile.toPath(), StandardCharsets.UTF_8);
       tableIndex = SSTableIndex.fromJson(json);
@@ -184,8 +184,8 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
       } finally {
         readLock.unlock();
       }
-      Files.writeString(idxFile.toPath(), tableIndex.toJson(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
     }
+    return tableIndex;
   }
 
   private void initBloomFilter() throws IOException {
@@ -355,5 +355,10 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     } else {
       throw new SSTException(String.format("can't delete files, reader is open. Tablename: %s", getTableName()));
     }
+  }
+
+  @Override
+  public File getIndexFile() {
+    return idxFile;
   }
 }
