@@ -15,7 +15,8 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -77,7 +78,7 @@ public class TestHogletDBPerformance {
   }
 
   @Test
-  public void testperformance() throws HogletDBException {
+  public void testPerformance() throws HogletDBException {
     int savePercent = 0;
 
     assertFalse(hogletDB.isReadonly());

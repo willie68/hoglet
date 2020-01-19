@@ -36,7 +36,7 @@ class TestDeleteCompact {
     Thread.sleep(1000);
     dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withLvlTableCount(5)
-        .withMemTableMaxKeys(MEM_TABLE_MAX_KEYS).withInsertWaitTime(10 * 60 * 1000);
+        .withMemTableMaxKeys(MEM_TABLE_MAX_KEYS);
     number = 0;
   }
 
@@ -80,7 +80,7 @@ class TestDeleteCompact {
           savePercent = percent;
         }
       }
-      // export();
+      export(hogletDB);
 
       System.out.println("deleting keys.");
       presentKeys.addAll(keys);
@@ -99,7 +99,7 @@ class TestDeleteCompact {
           savePercent = percent;
         }
       }
-      // export();
+      export(hogletDB);
 
       System.out.println("testing deleted keys.");
       count = 0;
@@ -133,18 +133,18 @@ class TestDeleteCompact {
           savePercent = percent;
         }
       }
-      // export();
+      export(hogletDB);
 
       System.out.printf("ignored by compaction: %d\r\n", hogletDB.getSSTableManager().getIgnored());
     }
   }
 
-  private void export() {
+  private void export(HogletDB hogletDB) {
 
     File exportFile = new File(dbFolder, String.format("sst_exp_%d.txt", number));
 
     try {
-      SSTExporter exporter = new SSTExporter(options);
+      SSTExporter exporter = hogletDB.getSSTExporter();
       try (OutputStream out = new FileOutputStream(exportFile)) {
         exporter.export(out);
       }

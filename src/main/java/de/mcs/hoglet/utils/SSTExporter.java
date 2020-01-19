@@ -29,8 +29,6 @@ import java.util.ListIterator;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import de.mcs.hoglet.HogletDBException;
-import de.mcs.hoglet.Options;
 import de.mcs.hoglet.sst.Entry;
 import de.mcs.hoglet.sst.SSTException;
 import de.mcs.hoglet.sst.SSTableManager;
@@ -43,19 +41,18 @@ import de.mcs.utils.JsonByteArraySerializer;
  */
 public class SSTExporter {
 
-  private Options options;
-  private DatabaseUtils databaseUtils;
   private SSTableManager ssTableManager;
 
-  public SSTExporter(Options options) throws HogletDBException {
-    this.options = options;
-    databaseUtils = DatabaseUtils.newDatabaseUtils(options);
-
-    initSSTManager();
+  public static SSTExporter newSSTExporter() {
+    return new SSTExporter();
   }
 
-  private void initSSTManager() throws HogletDBException {
-    ssTableManager = SSTableManager.newSSTableManager(options, databaseUtils);
+  private SSTExporter() {
+  }
+
+  public SSTExporter withSSTableManager(SSTableManager ssTableManager) {
+    this.ssTableManager = ssTableManager;
+    return this;
   }
 
   public void export(OutputStream output) throws IOException, SSTException {

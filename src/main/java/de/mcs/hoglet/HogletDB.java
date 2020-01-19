@@ -54,6 +54,7 @@ import de.mcs.hoglet.sst.SSTableManager;
 import de.mcs.hoglet.sst.SSTableReader;
 import de.mcs.hoglet.sst.SortedMemoryTable;
 import de.mcs.hoglet.utils.DatabaseUtils;
+import de.mcs.hoglet.utils.SSTExporter;
 import de.mcs.hoglet.vlog.VLog;
 import de.mcs.hoglet.vlog.VLogEntryDescription;
 import de.mcs.hoglet.vlog.VLogEntryInfo;
@@ -624,5 +625,9 @@ public class HogletDB implements Closeable {
 
   SSTableManager getSSTableManager() {
     return ssTableManager;
+  }
+
+  public SSTExporter getSSTExporter() {
+    return SSTExporter.newSSTExporter().withSSTableManager(ssTableManager);
   }
 }
