@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import de.mcs.hoglet.sst.SSTException;
+import de.mcs.hoglet.sst.SSTableManager;
+import de.mcs.hoglet.utils.DatabaseUtils;
 import de.mcs.hoglet.utils.SSTExporter;
 
 class TestSSTExporter {
@@ -32,7 +34,9 @@ class TestSSTExporter {
 
     Options options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath());
     try {
-      SSTExporter exporter = new SSTExporter(options);
+      DatabaseUtils databaseUtils = DatabaseUtils.newDatabaseUtils(options);
+      SSTableManager manager = SSTableManager.newSSTableManager(options, databaseUtils);
+      SSTExporter exporter = SSTExporter.newSSTExporter().withSSTableManager(manager);
       try (OutputStream out = new FileOutputStream(exportFile)) {
         exporter.export(out);
       }

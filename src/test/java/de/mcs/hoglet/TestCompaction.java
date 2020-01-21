@@ -15,9 +15,7 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -36,7 +34,6 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
 import de.mcs.hoglet.sst.SSTException;
-import de.mcs.hoglet.utils.SSTExporter;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.ByteArrayUtils;
@@ -112,7 +109,7 @@ class TestCompaction {
           savePercent = percent;
         }
       }
-      export();
+      export(hogletDB);
 
       System.out.println("testing keys in order.");
       int count = 0;
@@ -156,7 +153,7 @@ class TestCompaction {
         }
       }
 
-      export();
+      export(hogletDB);
 
       System.out.println("testing deleted keys.");
       count = 0;
@@ -211,7 +208,7 @@ class TestCompaction {
           savePercent = percent;
         }
       }
-      export();
+      export(hogletDB);
 
     }
     System.out.println("ready, waiting for new SST file");
@@ -357,14 +354,13 @@ class TestCompaction {
     }
   }
 
-  private void export() {
+  private void export(HogletDB hogletDB) {
 
     File exportFile = new File(dbFolder, String.format("sst_exp_%d.txt", number));
 
     try {
-      SSTExporter exporter = new SSTExporter(options);
       try (OutputStream out = new FileOutputStream(exportFile)) {
-        exporter.export(out);
+        hogletDB.getSSTExporter().export(out);
       }
     } catch (SSTException e) {
       // TODO Auto-generated catch block
