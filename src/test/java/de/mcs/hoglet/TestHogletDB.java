@@ -49,12 +49,12 @@ public class TestHogletDB {
   @BeforeAll
   public static void beforeAll() throws IOException, InterruptedException {
     SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().getFolder();
   }
 
   @AfterAll
-  public static void afterAll() {
-    SystemTestFolderHelper.outputStatistics();
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   @BeforeEach

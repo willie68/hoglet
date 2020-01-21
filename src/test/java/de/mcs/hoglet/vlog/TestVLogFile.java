@@ -18,7 +18,10 @@
  */
 package de.mcs.hoglet.vlog;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -81,8 +84,7 @@ class TestVLogFile {
     ids = new QueuedIDGenerator(1000);
     Thread.sleep(1000);
 
-    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withRAMDisk(false).withDeleteBeforeTest(true)
-        .getFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withRAMDisk(false).getFolder();
 
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withVlogMaxChunkCount(10000)
         .withVlogMaxSize(2048L * 1024L * 1024L);
@@ -91,8 +93,8 @@ class TestVLogFile {
   }
 
   @AfterAll
-  public static void afterAll() {
-    System.out.println(MeasureFactory.asString());
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   @Order(1)

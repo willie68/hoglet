@@ -18,9 +18,13 @@
  */
 package de.mcs.hoglet.sst;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,15 +61,19 @@ class TestSSTCompact {
   private static final int MAX_KEYS = 10000;
   private static final int MAX_ROUNDS = 10;
 
-  private IDGenerator ids;
-  private File dbFolder;
-  private Options options;
-  private boolean useBaseFolder = false;
+  private static IDGenerator ids;
+  private static File dbFolder;
+  private static Options options;
+  private static boolean useBaseFolder = false;
   private HogletDB hogletDB;
 
   @BeforeAll
-  static void beforeAll() {
+  static void beforeAll() throws IOException, InterruptedException {
     MockitoAnnotations.initMocks(TestSSTCompact.class);
+    SystemTestFolderHelper.initStatistics();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withUseOnlyBaseFolder(useBaseFolder).getFolder();
+    options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(MAX_KEYS);
+    ids = new QueuedIDGenerator(10000);
   }
 
   /**
@@ -73,11 +81,6 @@ class TestSSTCompact {
    */
   @BeforeEach
   void setUp() throws Exception {
-    SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true)
-        .withUseOnlyBaseFolder(useBaseFolder).getFolder();
-    options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(MAX_KEYS);
-    ids = new QueuedIDGenerator(10000);
     hogletDB = mock(HogletDB.class);
     when(hogletDB.containsKeyUptoSST(anyString(), any(), any())).thenReturn(false);
   }
@@ -90,8 +93,8 @@ class TestSSTCompact {
   }
 
   @AfterAll
-  static void afterAll() {
-    SystemTestFolderHelper.outputStatistics();
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   @Test

@@ -15,14 +15,14 @@
  */
 package de.mcs.hoglet.sst;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.IOException;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -31,16 +31,16 @@ import de.mcs.utils.SystemTestFolderHelper;
 
 class TestSSTReaderFactory {
 
-  private File dbFolder;
-  private Options options;
+  private static File dbFolder;
+  private static Options options;
 
   /**
    * @throws java.lang.Exception
    */
-  @BeforeEach
-  void setUp() throws Exception {
+  @BeforeAll
+  static void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath());
   }
 
@@ -52,8 +52,8 @@ class TestSSTReaderFactory {
   }
 
   @AfterAll
-  static void afterAll() {
-    SystemTestFolderHelper.outputStatistics();
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   @Test

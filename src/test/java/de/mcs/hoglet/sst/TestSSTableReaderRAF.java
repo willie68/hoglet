@@ -64,7 +64,7 @@ class TestSSTableReaderRAF {
   @BeforeAll
   public static void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(100000);
     table = new SortedMemoryTable(options);
     ids = new QueuedIDGenerator(10000);
@@ -78,9 +78,8 @@ class TestSSTableReaderRAF {
   }
 
   @AfterAll
-  static void afterAll() {
-    SystemTestFolderHelper.outputStatistics();
-    System.out.println("finnished");
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   @Order(1)

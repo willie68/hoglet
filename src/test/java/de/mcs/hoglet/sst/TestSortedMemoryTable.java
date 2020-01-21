@@ -18,14 +18,19 @@
  */
 package de.mcs.hoglet.sst;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,17 +52,23 @@ class TestSortedMemoryTable {
 
   private static final int MAX_KEYS = 50000;
   private static final int MAX_TEST_KEYS = 100000;
+  private static File dbFolder;
   private SortedMemoryTable table;
-  private IDGenerator ids;
+  private static IDGenerator ids;
+
+  @BeforeAll
+  public static void setUp() throws Exception {
+    SystemTestFolderHelper.initStatistics();
+    ids = new QueuedIDGenerator(10000);
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().getFolder();
+  }
 
   /**
    * @throws java.lang.Exception
    */
   @BeforeEach
-  void setUp() throws Exception {
-    SystemTestFolderHelper.initStatistics();
+  void beforeEach() throws Exception {
     table = new SortedMemoryTable(Options.defaultOptions());
-    ids = new QueuedIDGenerator(10000);
   }
 
   /**
@@ -68,8 +79,8 @@ class TestSortedMemoryTable {
   }
 
   @AfterAll
-  static void afterAll() {
-    SystemTestFolderHelper.outputStatistics();
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   @Test

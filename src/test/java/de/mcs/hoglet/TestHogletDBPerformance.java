@@ -43,6 +43,7 @@ import de.mcs.utils.SystemTestFolderHelper;
  */
 public class TestHogletDBPerformance {
 
+  private static boolean DO_THIS_TEST = false;
   private static final int MAX_DOC_COUNT = 1000000;
 
   private HogletDB hogletDB;
@@ -51,13 +52,12 @@ public class TestHogletDBPerformance {
   @BeforeAll
   public static void beforeAll() throws IOException, InterruptedException {
     SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withRAMDisk(true).withDeleteBeforeTest(true)
-        .getFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withRAMDisk(true).getFolder();
   }
 
   @AfterAll
-  public static void afterAll() {
-    SystemTestFolderHelper.outputStatistics();
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   @BeforeEach
@@ -79,6 +79,12 @@ public class TestHogletDBPerformance {
 
   @Test
   public void testPerformance() throws HogletDBException {
+    if (DO_THIS_TEST) {
+      doIt();
+    }
+  }
+
+  private void doIt() throws HogletDBException {
     int savePercent = 0;
 
     assertFalse(hogletDB.isReadonly());

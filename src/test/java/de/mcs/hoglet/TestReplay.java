@@ -15,7 +15,9 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,13 +46,12 @@ class TestReplay {
     SystemTestFolderHelper.initStatistics();
     ids = new QueuedIDGenerator(1000);
     Thread.sleep(1000);
-
-    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().getFolder();
   }
 
   @AfterAll
-  public static void afterAll() {
-    SystemTestFolderHelper.outputStatistics();
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   @Test

@@ -52,16 +52,15 @@ class TestVLogList {
     ids = new QueuedIDGenerator(1000);
     Thread.sleep(1000);
 
-    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).withRAMDisk(false)
-        .getFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withRAMDisk(false).getFolder();
 
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withVlogMaxChunkCount(10000)
         .withVlogMaxSize(2048L * 1024L * 1024L);
   }
 
   @AfterAll
-  public static void afterAll() {
-    System.out.println(MeasureFactory.asString());
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   @Order(1)

@@ -34,15 +34,15 @@ class TestDeleteCompact {
   public static void beforeAll() throws IOException, InterruptedException {
     SystemTestFolderHelper.initStatistics();
     Thread.sleep(1000);
-    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withLvlTableCount(5)
         .withMemTableMaxKeys(MEM_TABLE_MAX_KEYS);
     number = 0;
   }
 
   @AfterAll
-  public static void afterAll() {
-    SystemTestFolderHelper.outputStatistics();
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   private List<byte[]> delKeys;

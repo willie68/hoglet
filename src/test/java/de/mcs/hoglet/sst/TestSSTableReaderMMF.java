@@ -64,7 +64,7 @@ class TestSSTableReaderMMF {
   @BeforeAll
   public static void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
-    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().withDeleteBeforeTest(true).getFolder();
+    dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().getFolder();
     options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(100000)
         .withSstIndexPreload(true);
     table = new SortedMemoryTable(options);
@@ -79,9 +79,8 @@ class TestSSTableReaderMMF {
   }
 
   @AfterAll
-  static void afterAll() {
-    SystemTestFolderHelper.outputStatistics();
-    System.out.println("finnished");
+  public static void afterAll() throws IOException {
+    SystemTestFolderHelper.outputStatistics(dbFolder, true);
   }
 
   @Order(1)

@@ -38,14 +38,8 @@ public class SystemTestFolderHelper {
     return new SystemTestFolderHelper().withUseOnlyBaseFolder(false).withRAMDisk(true);
   }
 
-  private boolean deleteBeforeTest;
   private boolean useBaseFolder;
   private boolean ramDisk;
-
-  public SystemTestFolderHelper withDeleteBeforeTest(boolean deleteBeforeTest) {
-    this.deleteBeforeTest = deleteBeforeTest;
-    return this;
-  }
 
   public SystemTestFolderHelper withUseOnlyBaseFolder(boolean useBaseFolder) {
     this.useBaseFolder = useBaseFolder;
@@ -65,10 +59,6 @@ public class SystemTestFolderHelper {
       }
     }
     baseFolder.mkdirs();
-    if (deleteBeforeTest) {
-      de.mcs.utils.Files.remove(baseFolder, true);
-      baseFolder.mkdirs();
-    }
     File dbFolder = baseFolder;
     if (!useBaseFolder) {
       Random rnd = new Random(System.currentTimeMillis());
@@ -86,7 +76,10 @@ public class SystemTestFolderHelper {
     MeasureFactory.setOption(JMConfig.OPTION_DISABLE_DEVIATION, "true");
   }
 
-  public static void outputStatistics() {
+  public static void outputStatistics(File dbFolder, boolean deleteAfterTest) throws IOException {
+    if (deleteAfterTest) {
+      de.mcs.utils.Files.remove(dbFolder, true);
+    }
     System.out.println();
     System.out.println(MeasureFactory.asString());
   }
