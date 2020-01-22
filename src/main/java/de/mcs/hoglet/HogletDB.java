@@ -362,9 +362,10 @@ public class HogletDB implements Closeable {
       immutableTableLock.unlock();
     }
 
+    MapKey mapkey = MapKey.buildPrefixedKey(collection, key);
+
     for (ListIterator<SSTableReader> iterator = ssTableManager.iteratorInCreationOrder(); iterator.hasNext();) {
       SSTableReader ssTableReader = iterator.next();
-      MapKey mapkey = MapKey.buildPrefixedKey(collection, key);
       try {
         Entry entry = ssTableReader.get(mapkey);
         if (entry != null) {

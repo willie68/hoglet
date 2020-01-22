@@ -15,9 +15,7 @@
  */
 package de.mcs.hoglet;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -39,6 +37,7 @@ import de.mcs.hoglet.sst.SSTException;
 import de.mcs.jmeasurement.MeasureFactory;
 import de.mcs.jmeasurement.Monitor;
 import de.mcs.utils.ByteArrayUtils;
+import de.mcs.utils.GsonUtils;
 import de.mcs.utils.SystemTestFolderHelper;
 
 class TestCompaction {
@@ -62,7 +61,7 @@ class TestCompaction {
 
   @AfterAll
   public static void afterAll() throws IOException {
-    SystemTestFolderHelper.outputStatistics(dbFolder, true);
+    SystemTestFolderHelper.outputStatistics(dbFolder, false);
   }
 
   private List<byte[]> delKeys;
@@ -260,11 +259,14 @@ class TestCompaction {
       }
 
       System.out.println("testing deleted keys.");
+      List<byte[]> errorKeys = new ArrayList<>();
       count = 0;
       savePercent = 0;
       for (byte[] key : delKeys) {
         boolean test = hogletDB.contains(key);
-        assertFalse(hogletDB.contains(key), "del key found, number " + count);
+        if (test) {
+          errorKeys.add(key);
+        }
         count++;
         int percent = (count * 100) / keys.size();
         if (percent != savePercent) {
@@ -272,6 +274,8 @@ class TestCompaction {
           savePercent = percent;
         }
       }
+
+      assertEquals(0, errorKeys.size(), "del key found for numbers: " + GsonUtils.getJsonMapper().toJson(errorKeys));
 
       System.out.println("testing non imported keys");
       for (int i = 0; i < MAX_DOC_COUNT; i++) {
