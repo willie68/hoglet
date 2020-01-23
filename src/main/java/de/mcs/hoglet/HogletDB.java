@@ -86,6 +86,7 @@ public class HogletDB implements Closeable {
   private EventBus eventBus;
   private SSTableManager ssTableManager;
   private ExecutorService eventBusExecutor;
+  private HogletOracle oracle;
 
   /**
    * create a new instance of the hoglet key value store with specifig options.
@@ -155,6 +156,7 @@ public class HogletDB implements Closeable {
       readonly = true;
     }
     vLogList = new VLogList(options);
+    vLogList.setOracle(oracle);
     vLogList.setReadonly(readonly);
     memoryTable = getNewMemoryTable();
     immutableTable = null;

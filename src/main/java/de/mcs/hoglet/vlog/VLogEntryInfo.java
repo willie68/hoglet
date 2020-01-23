@@ -77,6 +77,7 @@ public class VLogEntryInfo {
   byte[] hash;
   String vLogName;
   byte[] value;
+  private long id;
 
   /**
    * @return the start
@@ -275,4 +276,27 @@ public class VLogEntryInfo {
     return this;
   }
 
+  /**
+   * @return the id
+   */
+  public long getId() {
+    return id;
+  }
+
+  /**
+   * @param id
+   *          the id to set
+   */
+  public void setId(long id) {
+    this.id = id;
+  }
+
+  /**
+   * @param id
+   *          the id to set
+   */
+  public VLogEntryInfo withId(long id) {
+    setId(id);
+    return this;
+  }
 }

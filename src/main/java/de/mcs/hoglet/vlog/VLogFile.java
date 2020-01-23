@@ -34,6 +34,7 @@ import java.util.zip.CRC32;
 import org.apache.commons.io.input.BoundedInputStream;
 
 import de.mcs.hoglet.HogletDBException;
+import de.mcs.hoglet.HogletOracle;
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.utils.DatabaseUtils;
@@ -57,6 +58,7 @@ public class VLogFile implements Closeable {
   private Options options;
   private int chunkCount;
   private boolean readOnly;
+  private HogletOracle oracle;
 
   public static File getFilePathName(File path, int number) {
     return DatabaseUtils.getVLogFilePath(path, number);
@@ -142,15 +144,18 @@ public class VLogFile implements Closeable {
     crc32.update(chunk);
     digest = ByteArrayUtils.longToBytes(crc32.getValue());
 
-    VLogEntryInfo info = new VLogEntryInfo().withStart(fileChannel.position()).withHash(digest);
+    VLogEntryInfo info = new VLogEntryInfo().withStart(fileChannel.position()).withHash(digest)
+        .withId(oracle.getNextId());
 
     VLogDescriptor vlogDescriptor = new VLogDescriptor();
     vlogDescriptor.collectionBytes = collectionBytes;
     vlogDescriptor.key = key;
+    vlogDescriptor.setId(info.getId());
     vlogDescriptor.chunkNumber = chunknumber;
     vlogDescriptor.hash = digest;
     vlogDescriptor.length = chunk.length;
     vlogDescriptor.operation = operation;
+
     // write the binary data
     ByteBuffer bytes = vlogDescriptor.getBytes();
     ByteBuffer size = ByteBuffer.allocate(4);
@@ -228,8 +233,13 @@ public class VLogFile implements Closeable {
     return readOnly;
   }
 
-  public VLogFile setReadOnly(boolean readonly) {
+  public VLogFile withReadOnly(boolean readonly) {
     this.readOnly = readonly;
+    return this;
+  }
+
+  public VLogFile withOracle(HogletOracle oracle) {
+    this.oracle = oracle;
     return this;
   }
 

@@ -73,11 +73,11 @@ public class SSTCompacter {
           QueuedReaderEntry entry = queue.getNextEntry();
           if (entry != null) {
             MapKey mapKey = entry.getEntry().getKey();
-            // if (!hogletDB.containsKeyUptoSST(mapKey.getCollection(), mapKey.getKey(), entry.getSstIdentity())) {
-            writer.write(entry.getEntry());
-            // } else {
-            // ignored++;
-            // }
+            if (!hogletDB.containsKeyUptoSST(mapKey.getCollection(), mapKey.getKey(), entry.getSstIdentity())) {
+              writer.write(entry.getEntry());
+            } else {
+              ignored++;
+            }
           }
         }
         writer.setLastVLogEntry(queue.getLastVLogEntry());
