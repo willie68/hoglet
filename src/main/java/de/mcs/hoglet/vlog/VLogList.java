@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantLock;
 
 import de.mcs.hoglet.HogletDBException;
+import de.mcs.hoglet.HogletOracle;
 import de.mcs.hoglet.Options;
 import de.mcs.utils.caches.KeyAlreadyExistsException;
 import de.mcs.utils.caches.ObjectCache;
@@ -41,6 +42,8 @@ public class VLogList implements AutoCloseable {
   private ObjectCache<VLog> readMap;
 
   private boolean readonly;
+
+  private HogletOracle oracle;
 
   public VLogList(Options options) {
     this.options = options;
@@ -128,7 +131,7 @@ public class VLogList implements AutoCloseable {
           throw new HogletDBException(String.format("vlog not found: %s", file.getName()));
         }
         try {
-          VLogFile vLogFile = new VLogFile(options, file).setReadOnly(true);
+          VLogFile vLogFile = new VLogFile(options, file).withReadOnly(true).withOracle(oracle);
           vLog = VLog.wrap(vLogFile);
         } catch (IOException e) {
           throw new HogletDBException(e);
@@ -183,6 +186,10 @@ public class VLogList implements AutoCloseable {
 
   public void setReadonly(boolean readonly) {
     this.readonly = readonly;
+  }
+
+  public void setOracle(HogletOracle oracle) {
+    this.oracle = oracle;
   }
 
 }

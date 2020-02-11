@@ -39,11 +39,12 @@ public class VLogDescriptor {
   // COLLECTION + 1 byte KEY_LENGTH + KEY
   // itself + 4 bytes Chunknumber + 8 byte length + 32 byte hash + 1 byte
   // DOC_LIMITER
-  private static final int HEADER_MAX_LENGTH = DOC_START.length + 1 + KEY_MAX_LENGTH + 1 + KEY_MAX_LENGTH + 4 + 8
+  private static final int HEADER_MAX_LENGTH = DOC_START.length + 1 + KEY_MAX_LENGTH + 1 + KEY_MAX_LENGTH + 8 + 4 + 8
       + HASH_LENGTH + DOC_LIMITER.length;
 
   byte[] collectionBytes;
   byte[] key;
+  private long id;
   int chunkNumber;
   long length;
   byte[] hash;
@@ -66,6 +67,7 @@ public class VLogDescriptor {
     header.put(collectionBytes);
     header.put((byte) key.length);
     header.put(key);
+    header.putLong(getId());
     header.putInt(chunkNumber);
     header.putLong(length);
     header.putInt(operation.ordinal());
@@ -90,7 +92,7 @@ public class VLogDescriptor {
     int keyLength = buffer.get();
     vLogPostFix.key = new byte[keyLength];
     buffer.get(vLogPostFix.key);
-
+    vLogPostFix.setId(buffer.getLong());
     vLogPostFix.chunkNumber = buffer.getInt();
     vLogPostFix.length = buffer.getLong();
     int opValue = buffer.getInt();
@@ -121,6 +123,7 @@ public class VLogDescriptor {
     vLogPostFix.key = new byte[keyLength];
     buffer.get(vLogPostFix.key);
 
+    vLogPostFix.setId(buffer.getLong());
     vLogPostFix.chunkNumber = buffer.getInt();
     if (vLogPostFix.chunkNumber < 0) {
       return null;
@@ -221,6 +224,21 @@ public class VLogDescriptor {
   public VLogDescriptor setHash(byte[] hash) {
     this.hash = hash;
     return this;
+  }
+
+  /**
+   * @return the id
+   */
+  public long getId() {
+    return id;
+  }
+
+  /**
+   * @param id
+   *          the id to set
+   */
+  public void setId(long id) {
+    this.id = id;
   }
 
 }

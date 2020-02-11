@@ -18,10 +18,7 @@
  */
 package de.mcs.hoglet.vlog;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -47,6 +44,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import de.mcs.hoglet.HogletDBException;
+import de.mcs.hoglet.HogletOracle;
 import de.mcs.hoglet.Operation;
 import de.mcs.hoglet.Options;
 import de.mcs.hoglet.utils.DatabaseUtils;
@@ -74,6 +72,7 @@ class TestVLogFile {
   private static Map<String, VLogEntryInfo> myMap;
   private static List<String> myIds;
   private static File myVLogFile;
+  private static HogletOracle oracle;
 
   /**
    * @throws java.lang.Exception
@@ -90,6 +89,7 @@ class TestVLogFile {
         .withVlogMaxSize(2048L * 1024L * 1024L);
     myIds = new ArrayList<>();
     myMap = new HashMap<>();
+    oracle = HogletOracle.newHogletOracle(0);
   }
 
   @AfterAll
@@ -105,6 +105,7 @@ class TestVLogFile {
     deleteLogFile(fileIndex);
 
     try (VLogFile vLogFile = new VLogFile(options, fileIndex)) {
+      vLogFile.withOracle(oracle);
       assertTrue(vLogFile.isAvailbleForWriting());
       byte[] buffer = new byte[128];
       for (int i = 0; i < buffer.length; i++) {
@@ -150,6 +151,7 @@ class TestVLogFile {
     Map<byte[], VLogEntryInfo> infos = new HashMap<>();
     VLogEntryInfo info = null;
     try (VLogFile vLogFile = new VLogFile(options, 12)) {
+      vLogFile.withOracle(oracle);
       myVLogFile = vLogFile.getFile();
       byte[] buffer = new byte[1024 * 1024];
       new Random().nextBytes(buffer);
@@ -200,10 +202,12 @@ class TestVLogFile {
     System.out.println("test iterator");
     int count = 0;
     try (VLogFile vLogFile = new VLogFile(options, myVLogFile)) {
+      vLogFile.withOracle(oracle);
+
       assertTrue(vLogFile.isReadOnly());
       assertFalse(vLogFile.isAvailbleForWriting());
 
-      vLogFile.setReadOnly(true);
+      vLogFile.withReadOnly(true);
       assertTrue(vLogFile.isReadOnly());
 
       List<VLogEntryDescription> list = new ArrayList<>();
@@ -310,6 +314,7 @@ class TestVLogFile {
         .withVlogMaxSize(128L * 1024L * 1024L);
 
     try (VLogFile vLogFile = new VLogFile(myOptions, fileIndex)) {
+      vLogFile.withOracle(oracle);
       myVLogFile = vLogFile.getFile();
       byte[] buffer = new byte[1024 * 1024];
       new Random().nextBytes(buffer);
@@ -356,6 +361,7 @@ class TestVLogFile {
         .withVlogMaxSize(1024L * 1024L * 1024L);
 
     try (VLogFile vLogFile = new VLogFile(myOptions, fileIndex)) {
+      vLogFile.withOracle(oracle);
       myVLogFile = vLogFile.getFile();
       byte[] buffer = new byte[1024 * 1024];
       new Random().nextBytes(buffer);
@@ -413,6 +419,7 @@ class TestVLogFile {
     assertFalse(vlogFile.exists());
 
     try (VLogFile vLogFile = new VLogFile(myOptions, fileIndex)) {
+      vLogFile.withOracle(oracle);
       myVLogFile = vLogFile.getFile();
       byte[] buffer = new byte[1024 * 1024];
       new Random().nextBytes(buffer);
@@ -440,6 +447,7 @@ class TestVLogFile {
     int fileIndex = 15;
     deleteLogFile(fileIndex);
     try (VLogFile vLogFile = new VLogFile(options, fileIndex)) {
+      vLogFile.withOracle(oracle);
       assertTrue(vLogFile.isAvailbleForWriting());
       byte[] buffer = new byte[257];
       for (int i = 0; i < buffer.length; i++) {
