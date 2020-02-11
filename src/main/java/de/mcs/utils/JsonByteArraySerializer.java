@@ -16,6 +16,7 @@
 package de.mcs.utils;
 
 import java.lang.reflect.Type;
+import java.util.Base64;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -29,14 +30,14 @@ public class JsonByteArraySerializer implements JsonSerializer<byte[]>, JsonDese
 
   @Override
   public JsonElement serialize(byte[] src, Type typeOfSrc, JsonSerializationContext context) {
-    return new JsonPrimitive(ByteArrayUtils.bytesAsHexString(src));
+    return new JsonPrimitive(Base64.getEncoder().encodeToString(src));
   }
 
   @Override
   public byte[] deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
       throws JsonParseException {
     try {
-      return ByteArrayUtils.decodeHex(json.getAsJsonPrimitive().getAsString());
+      return Base64.getDecoder().decode(json.getAsJsonPrimitive().getAsString());
     } catch (Exception e) {
       throw new JsonParseException(e);
     }
