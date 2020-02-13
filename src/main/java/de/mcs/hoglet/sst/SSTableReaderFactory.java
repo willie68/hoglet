@@ -31,16 +31,15 @@ import de.mcs.utils.logging.Logger;
 public class SSTableReaderFactory {
   private static Logger log = Logger.getLogger(SSTableReaderFactory.class);
 
-  public static SSTableReader getReader(Options options, int readingLevel, int number)
-      throws SSTException, IOException {
+  public static SSTableReader getReader(Options options, SSTIdentity identity) throws SSTException, IOException {
     boolean capableOfUnmapMMF = MMFUtils.isSystemCapableOfUnmapMMF();
     if (capableOfUnmapMMF && Options.SSTReadStrategy.MMF.equals(options.getSstReadStrategy())) {
-      return new SSTableReaderMMF(options, readingLevel, number);
+      return new SSTableReaderMMF(options, identity);
     } else {
       if (!capableOfUnmapMMF) {
         log.warn("system is not capable of using mmf files.");
       }
-      return new SSTableReaderRAF(options, readingLevel, number);
+      return new SSTableReaderRAF(options, identity);
     }
   }
 

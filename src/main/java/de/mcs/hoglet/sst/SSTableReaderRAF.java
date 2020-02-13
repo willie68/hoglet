@@ -100,7 +100,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   private int cacheSize;
   private File idxFile;
 
-  public SSTableReaderRAF(Options options, int level, int number) throws SSTException, IOException {
+  public SSTableReaderRAF(Options options, int level, int number, int reincarnation) throws SSTException, IOException {
     keyCount = ((long) Math.pow(options.getLvlTableCount(), level + 1)) * options.getMemTableMaxKeys();
     cacheSize = SSTableIndex.calcCacheSize(keyCount);
     this.options = options;
@@ -109,7 +109,8 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
     this.chunkCount = 0;
     this.missedKeys = 0;
     this.readLock = new ReentrantLock();
-    this.sstIdentity = SSTIdentity.newSSTIdentity().withNumber(number).withLevel(level);
+    this.sstIdentity = SSTIdentity.newSSTIdentity().withNumber(number).withLevel(level)
+        .withReincarnation(reincarnation);
     init();
   }
 
@@ -129,10 +130,10 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   }
 
   private void openSSTable() throws SSTException, IOException {
-    filename = DatabaseUtils.getSSTFileName(level, number);
+    filename = DatabaseUtils.getSSTFileName(sstIdentity);
     log.debug("reading sst file: %s, max keycount: %d, cachesize: %d", filename, keyCount, cacheSize);
 
-    sstFile = databaseUtils.getSSTFilePath(level, number);
+    sstFile = databaseUtils.getSSTFilePath(sstIdentity);
     if (!sstFile.exists()) {
       throw new SSTException(String.format("sst file for level %d number %d does not exists.", level, number));
     }

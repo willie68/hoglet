@@ -45,14 +45,13 @@ public class MemoryTableWriter implements Closeable {
 
   private Logger log = Logger.getLogger(this.getClass());
   private Options options;
-  private int level;
-  private int number;
   private BloomFilter<MapKey> bloomfilter;
   private File sstFile;
   private RandomAccessFile raf;
   private FileChannel fileChannel;
   private long keyCount;
   private VLogEntryInfo lastVLogEntry;
+  private SSTIdentity identity;
 
   /**
    * creating a new SS Table writer in the desired path.
@@ -67,22 +66,24 @@ public class MemoryTableWriter implements Closeable {
    *           if something goes wrong
    * @throws IOException
    */
-  public MemoryTableWriter(Options options, int level, int number) throws SSTException, IOException {
+  public MemoryTableWriter(Options options, SSTIdentity identity) throws SSTException, IOException {
     this.options = options;
-    this.level = level;
-    this.number = number;
+    this.identity = identity;
     init();
   }
 
   private void init() throws SSTException, IOException {
-    if (level < 0) {
+    if (identity.getLevel() < 0) {
       throw new SSTException("level should be greater or equal 0");
     }
-    if (number < 0) {
+    if (identity.getNumber() < 0) {
       throw new SSTException("number should be greater or equal 0");
     }
+    if (identity.getReincarnation() < 0) {
+      throw new SSTException("reincarnation should be greater or equal 0");
+    }
     MapKeyFunnel funnel = new MapKeyFunnel();
-    long keyCount = ((long) Math.pow(options.getLvlTableCount(), level)) * options.getMemTableMaxKeys();
+    long keyCount = ((long) Math.pow(options.getLvlTableCount(), identity.getLevel())) * options.getMemTableMaxKeys();
     bloomfilter = BloomFilter.create(funnel, keyCount, 0.01);
 
     createSSTable();
@@ -97,16 +98,16 @@ public class MemoryTableWriter implements Closeable {
    * @throws IOException
    */
   private void createSSTable() throws SSTException, IOException {
-    sstFile = DatabaseUtils.getSSTFilePath(new File(options.getPath()), level, number);
+    sstFile = DatabaseUtils.getSSTFilePath(new File(options.getPath()), identity);
     log.debug("creating new sst file: %s", sstFile.getName());
     if (sstFile.exists()) {
-      throw new SSTException(String.format("sst file for level %d number %d already exists.", level, number));
+      throw new SSTException(String.format("sst file for identity \"%s\" already exists.", identity.toString()));
     }
-    File idxFile = DatabaseUtils.getSSTIndexFilePath(new File(options.getPath()), level, number);
+    File idxFile = DatabaseUtils.getSSTIndexFilePath(new File(options.getPath()), identity);
     if (idxFile.exists()) {
       if (!idxFile.delete()) {
         throw new SSTException(
-            String.format("idx file for level %d number %d already exists and can't be deleted.", level, number));
+            String.format("idx file for identity \"%s\" already exists and can't be deleted.", identity.toString()));
       }
     }
 
@@ -205,7 +206,7 @@ public class MemoryTableWriter implements Closeable {
   }
 
   private void writeIndexFile() throws IOException, SSTException {
-    try (SSTableReader reader = SSTableReaderFactory.getReader(options, level, number)) {
+    try (SSTableReader reader = SSTableReaderFactory.getReader(options, identity)) {
       SSTableIndex tableIndex = reader.createIndex();
       File idxFile = reader.getIndexFile();
       Files.writeString(idxFile.toPath(), tableIndex.toJson(), StandardCharsets.UTF_8, StandardOpenOption.CREATE);

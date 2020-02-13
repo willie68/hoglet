@@ -10,3 +10,34 @@ The second design goal is a key/value store used for thousend of millions of sma
 
 - Retention time for entries.
 - auto compress vlog files (settings for e.g. every vlog must be compressed 
+
+## Derzeitige Schwierigkeiten: ##
+
+Besteht ein Zugriff (z.B. durch Cursors oder direkten Key Zugriff auf eine SST, kann diese während des Compact Prozesses nicht gelöscht werden. Das Problem ist besteht sogar weitgehender, denn selbst wenn die Dateien gelöscht werden können, kann es passieren, daß der Cursor dann auf den neuen SST der nächsten Ebene arbeitet und dann zu einem späteren Zeitpunkt wieder den gleichen Satz der Keys verarbeitet. Das muss verhinder werden.
+
+Cursor Zeitpunkt A
+
+
+
+> A1 A2 A3 A4 A5  
+> B1 B2
+
+A wird compacted, kann aber wegen dem Cursor nicht gelöscht werden
+
+Compact
+
+> A1 A2 A3 A4 A5  
+> B1 B2 B3  
+
+Cursor wander auf Ebene B weiter, A kann gelöscht werden.
+
+> B1 B2 B3  
+
+Wenn nun der Cursor zu B3 kommt, hat er den Inhalt bereits in seiner Ax verarbeitung verarbeitet.
+
+Lösung: Konsequentes Snapshotting zu Beginn des Cursors. Für einen Cursor muss die Dateistruktur während seiner Ausführung stabil bleiben. 
+D.h. Dateien dürfen nur gelöscht werden, wenn es keine aktive Cursorverbindung mehr gibt. D.h. alle Cursor müssen zumindest mit ihtm Verarbeitungszeiger nach der zu löschenden Datei stehen.
+
+Weiterhin müssen die Ebenen ebenfalls in einem Snapshot zusammen gefasst werden. D.h. es wird pro Ebene eine neue Größe, reincarnation eingeführt. 
+Wir eine Ebene compacted, wird eine neue Reincarnation angelegt. Alle neu zu erstellenden Dateien dieser Ebene werden dieser Reincarnation zu geordnet. Die Cursor Snapshots bleiben davon unberührt, da diese weiterhin auf der alten Reincarnation arbeiten. Eine Reincarnation kann nur gelöscht werden, wenn es keine Snapshot mehr gibt, der auf dieser arbeitet.
+

@@ -25,6 +25,7 @@ package de.mcs.hoglet.sst;
 public class SSTIdentity {
   private int level;
   private int number;
+  private int reincarnation;
 
   public static SSTIdentity newSSTIdentity() {
     return new SSTIdentity();
@@ -70,4 +71,31 @@ public class SSTIdentity {
     return this;
   }
 
+  /**
+   * @return the reincarnation
+   */
+  public int getReincarnation() {
+    return reincarnation;
+  }
+
+  /**
+   * @param reincarnation the reincarnation to set
+   */
+  public void setReincarnation(int reincarnation) {
+    this.reincarnation = reincarnation;
+  }
+
+  /**
+   * @param reincarnation the reincarnation to set
+   * @return 
+   */
+  public SSTIdentity withReincarnation(int reincarnation) {
+    setReincarnation(reincarnation);
+    return this;
+  }
+
+  @Override
+  public String toString() {
+    return String.format("level: %d, number: %d, reincarnation: %s", level, number, reincarnation);
+  }
 }
