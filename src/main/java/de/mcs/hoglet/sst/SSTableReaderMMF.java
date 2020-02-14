@@ -86,8 +86,6 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   private static final int CACHE_SIZE = 1000;
   private Logger log = Logger.getLogger(this.getClass());
   private Options options;
-  private int level;
-  private int number;
   private BloomFilter<MapKey> bloomfilter;
   private long chunkCount;
   private String filename;
@@ -106,24 +104,22 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   private int cacheSize;
   private File idxFile;
 
-  public SSTableReaderMMF(Options options, int level, int number) throws SSTException, IOException {
-    keyCount = ((long) Math.pow(options.getLvlTableCount(), level + 1)) * options.getMemTableMaxKeys();
+  public SSTableReaderMMF(Options options, SSTIdentity identity) throws SSTException, IOException {
+    keyCount = ((long) Math.pow(options.getLvlTableCount(), identity.getLevel() + 1)) * options.getMemTableMaxKeys();
     cacheSize = SSTableIndex.calcCacheSize(keyCount);
     this.options = options;
-    this.level = level;
-    this.number = number;
+    this.sstIdentity = identity;
     this.chunkCount = 0;
     this.missedKeys = 0;
     this.readWriteLock = new ReentrantReadWriteLock();
-    this.sstIdentity = SSTIdentity.newSSTIdentity().withNumber(number).withLevel(level);
     init();
   }
 
   private void init() throws SSTException, IOException {
-    if (level < 0) {
+    if (sstIdentity.getLevel() < 0) {
       throw new SSTException("level should be greater than 0");
     }
-    if (number < 0) {
+    if (sstIdentity.getNumber() < 0) {
       throw new SSTException("number should be greater than 0");
     }
     MapKeyFunnel funnel = new MapKeyFunnel();
@@ -135,12 +131,12 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
   }
 
   private void openSSTable() throws SSTException, IOException {
-    filename = DatabaseUtils.getSSTFileName(level, number);
+    filename = DatabaseUtils.getSSTFileName(sstIdentity);
     log.debug("reading sst file: %s, max keycount: %d, cachesize: %d", filename, keyCount, cacheSize);
 
-    sstFile = databaseUtils.getSSTFilePath(level, number);
+    sstFile = databaseUtils.getSSTFilePath(sstIdentity);
     if (!sstFile.exists()) {
-      throw new SSTException(String.format("sst file for level %d number %d does not exists.", level, number));
+      throw new SSTException(String.format("sst file for identits \"%s\"  does not exists.", sstIdentity.toString()));
     }
 
     raf = new RandomAccessFile(sstFile, "r");
@@ -154,7 +150,7 @@ public class SSTableReaderMMF implements Closeable, SSTableReader {
     fileChannel.position(0);
     mmfBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, raf.length());
 
-    idxFile = databaseUtils.getSSTIndexFilePath(level, number);
+    idxFile = databaseUtils.getSSTIndexFilePath(sstIdentity);
     if (options.isSstIndexPreload()) {
       tableIndex = createIndex();
     }

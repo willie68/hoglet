@@ -55,6 +55,7 @@ public class SSTableManager {
   private Logger log = Logger.getLogger(this.getClass());
   private Options options;
   private SSTableReader[][] tableMatrix;
+  private int[] incarnations;
   private DatabaseUtils databaseUtils;
   private EventBus eventBus;
   private HogletDB hogletDB;
@@ -65,17 +66,19 @@ public class SSTableManager {
 
   private void initTableMatrix() throws HogletDBException {
     tableMatrix = new SSTableReader[getOptions().getSSTMaxLevels()][getOptions().getLvlTableCount()];
+    incarnations = new int[getOptions().getSSTMaxLevels()];
     for (int i = 0; i < tableMatrix.length; i++) {
       for (int j = 0; j < tableMatrix[i].length; j++) {
         tableMatrix[i][j] = null;
       }
+      incarnations[i] = 0;
     }
 
     for (int level = 0; level < tableMatrix.length; level++) {
       File[] sstFiles = getDatabaseUtils().getSSTFiles(level);
       for (int number = 0; number < sstFiles.length; number++) {
         try {
-          SSTableReader tableReader = SSTableReaderFactory.getReader(getOptions(), level, number);
+          SSTableReader tableReader = SSTableReaderFactory.getReader(getOptions(), identity);
           tableMatrix[level][number] = tableReader;
         } catch (SSTException | IOException e) {
           throw new HogletDBException(e);
@@ -199,7 +202,7 @@ public class SSTableManager {
   public void writeMemoryTable(MemoryTable immutableTable) throws IOException, SSTException {
     int number = getNextTableNumber(0);
     File file = SSTUtils.writeMemoryTable(options, number, immutableTable);
-    SSTableReader reader = SSTableReaderFactory.getReader(options, 0, number);
+    SSTableReader reader = SSTableReaderFactory.getReader(options, identity);
     tableMatrix[0][number] = reader;
     if ((number + 1) >= options.getLvlTableCount()) {
       getEventBus().post(new CompactLevelEventListener.CompactLevelEvent().withLevel(0));
@@ -258,7 +261,7 @@ public class SSTableManager {
       List<String> tableNames = compacter.start();
       log.debug(String.format("ignored keys: %d", compacter.getInored()));
       ignored += compacter.getInored();
-      SSTableReader reader = SSTableReaderFactory.getReader(options, nextLevel, number);
+      SSTableReader reader = SSTableReaderFactory.getReader(options, identity);
       tableMatrix[nextLevel][number] = reader;
 
       tableNames.forEach(n -> removeTable(level, n));

@@ -42,6 +42,8 @@ public class SSTCompacter {
   private Logger log = Logger.getLogger(this.getClass());
   private HogletDB hogletDB;
   private int ignored;
+  private int readingIncarnation;
+  private int writingIncarnation;
 
   public SSTCompacter(Options options) {
     this.options = options;
@@ -57,6 +59,16 @@ public class SSTCompacter {
     return this;
   }
 
+  public SSTCompacter withReadingIncarnation(int incarnation) {
+    this.readingIncarnation = incarnation;
+    return this;
+  }
+
+  public SSTCompacter withWritingIncarnation(int incarnation) {
+    this.writingIncarnation = incarnation;
+    return this;
+  }
+
   public SSTCompacter withHogletDB(HogletDB hogletDB) {
     this.hogletDB = hogletDB;
     return this;
@@ -67,7 +79,9 @@ public class SSTCompacter {
     try (SortedReaderQueue queue = SortedReaderQueue.newSortedReaderQueue(options).withReadingLevel(readingLevel)
         .open()) {
       int writingLevel = readingLevel + 1;
-      try (MemoryTableWriter writer = new MemoryTableWriter(options, writingLevel, writingNumber)) {
+      SSTIdentity writingIdentity = SSTIdentity.newSSTIdentity().withLevel(writingLevel).withNumber(writingNumber)
+          .withIncarnation(writingIncarnation);
+      try (MemoryTableWriter writer = new MemoryTableWriter(options, writingIdentity)) {
 
         while (queue.isAvailable()) {
           QueuedReaderEntry entry = queue.getNextEntry();

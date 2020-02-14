@@ -79,7 +79,7 @@ public class MemoryTableWriter implements Closeable {
     if (identity.getNumber() < 0) {
       throw new SSTException("number should be greater or equal 0");
     }
-    if (identity.getReincarnation() < 0) {
+    if (identity.getIncarnation() < 0) {
       throw new SSTException("reincarnation should be greater or equal 0");
     }
     MapKeyFunnel funnel = new MapKeyFunnel();

@@ -31,9 +31,9 @@ public class DatabaseUtils {
 
   private static final String VLOG_FILENAME_FORMAT = "%08d.vlog";
   private static final String VLOG_FILENAME_REGEX_NUMBER = "(.*)\\.vlog";
-  private static final String SST_FILENAME_REGEX_NUMBER = "sst_%02d_(.*)_%08h\\.sst";
-  private static final String SST_FILENAME_FORMAT = "sst_%02d_%02d_%08h.sst";
-  private static final String SST_INDEX_FILENAME_FORMAT = "sst_%02d_%02d_%08h.idx";
+  private static final String SST_FILENAME_REGEX_NUMBER = "sst_%02d_(.*)_%08x\\.sst";
+  private static final String SST_FILENAME_FORMAT = "sst_%02d_%02d_%08x.sst";
+  private static final String SST_INDEX_FILENAME_FORMAT = "sst_%02d_%02d_%08x.idx";
 
   public static DatabaseUtils newDatabaseUtils(Options options) {
     return new DatabaseUtils(options);
@@ -53,17 +53,17 @@ public class DatabaseUtils {
   }
 
   public static String getSSTFileName(SSTIdentity identity) {
-    return String.format(SST_FILENAME_FORMAT, identity.getLevel(), identity.getNumber(), identity.getReincarnation());
+    return String.format(SST_FILENAME_FORMAT, identity.getLevel(), identity.getNumber(), identity.getIncarnation());
   }
 
   public static File getSSTFilePath(File folder, SSTIdentity identity) {
     return new File(folder,
-        String.format(SST_FILENAME_FORMAT, identity.getLevel(), identity.getNumber(), identity.getReincarnation()));
+        String.format(SST_FILENAME_FORMAT, identity.getLevel(), identity.getNumber(), identity.getIncarnation()));
   }
 
   public static File getSSTIndexFilePath(File folder, SSTIdentity identity) {
-    return new File(folder, String.format(SST_INDEX_FILENAME_FORMAT, identity.getLevel(), identity.getNumber(),
-        identity.getReincarnation()));
+    return new File(folder,
+        String.format(SST_INDEX_FILENAME_FORMAT, identity.getLevel(), identity.getNumber(), identity.getIncarnation()));
   }
 
   private Options options;
@@ -72,17 +72,17 @@ public class DatabaseUtils {
     this.options = options;
   }
 
-  public int getSSTFileCount(final int level, final int reincarnation) {
-    return getSSTFiles(level, reincarnation).length;
+  public int getSSTFileCount(final int level, final int incarnation) {
+    return getSSTFiles(level, incarnation).length;
   }
 
-  public File[] getSSTFiles(final int level, final int reincarnation) {
+  public File[] getSSTFiles(final int level, final int incarnation) {
     File folder = new File(options.getPath());
+    String regex = String.format(SST_FILENAME_REGEX_NUMBER, level, incarnation);
     File[] listFiles = folder.listFiles(new FilenameFilter() {
 
       @Override
       public boolean accept(File dir, String name) {
-        String regex = String.format(SST_FILENAME_REGEX_NUMBER, level, reincarnation);
         return name.matches(regex);
       }
     });

@@ -94,7 +94,7 @@ class TestSSTCompact {
 
   @AfterAll
   public static void afterAll() throws IOException {
-    SystemTestFolderHelper.outputStatistics(dbFolder, true);
+    SystemTestFolderHelper.outputStatistics(dbFolder, false);
   }
 
   @Test
@@ -126,7 +126,8 @@ class TestSSTCompact {
       }
 
       Monitor mOpen = MeasureFactory.start("MemoryTableWriter.open");
-      try (MemoryTableWriter writer = new MemoryTableWriter(options, 1, x)) {
+      SSTIdentity identity = SSTIdentity.newSSTIdentity().withLevel(1).withNumber(x).withIncarnation(0);
+      try (MemoryTableWriter writer = new MemoryTableWriter(options, identity)) {
         mOpen.stop();
 
         table.forEach(entry -> {
@@ -142,16 +143,17 @@ class TestSSTCompact {
     }
 
     System.out.println("start compacting");
-    SSTCompacter compacter = SSTCompacter.newCompacter(options).withReadingLevel(1).withWritingNumber(1)
-        .withHogletDB(hogletDB);
+    SSTCompacter compacter = SSTCompacter.newCompacter(options).withReadingLevel(1).withReadingIncarnation(0)
+        .withWritingNumber(1).withWritingIncarnation(0).withHogletDB(hogletDB);
     compacter.start();
 
     DatabaseUtils dbUtils = DatabaseUtils.newDatabaseUtils(options);
-    assertEquals(10, dbUtils.getSSTFileCount(1));
-    assertEquals(1, dbUtils.getSSTFileCount(2));
+    assertEquals(10, dbUtils.getSSTFileCount(1, 0));
+    assertEquals(1, dbUtils.getSSTFileCount(2, 0));
 
     System.out.println("start reading");
-    try (SSTableReader reader = new SSTableReaderMMF(options, 2, 1)) {
+    SSTIdentity identity = SSTIdentity.newSSTIdentity().withIncarnation(0).withLevel(2).withNumber(1);
+    try (SSTableReader reader = new SSTableReaderMMF(options, identity)) {
       for (byte[] bs : saveKeys) {
         MapKey key = MapKey.buildPrefixedKey(collection, bs);
         assertTrue(reader.mightContain(key));
@@ -189,25 +191,26 @@ class TestSSTCompact {
       byte[] key = keys.get(i);
       table.add(collection, key, Operation.ADD, key);
     }
-    SSTUtils.writeMemoryTable(options, 0, table);
+
+    SSTUtils.writeMemoryTable(options, 0, 0, table);
 
     table = new SortedMemoryTable(options);
     for (int i = 0; i < MAX_DELTE_KEYS_ADD; i++) {
       byte[] key = keys.get(i + MAX_DELTE_KEYS_ADD);
       table.add(collection, key, Operation.ADD, key);
     }
-    SSTUtils.writeMemoryTable(options, 1, table);
+    SSTUtils.writeMemoryTable(options, 1, 0, table);
 
     System.out.println("start compacting");
 
-    SSTCompacter compacter = SSTCompacter.newCompacter(options).withReadingLevel(0).withWritingNumber(1)
-        .withHogletDB(hogletDB);
+    SSTCompacter compacter = SSTCompacter.newCompacter(options).withReadingLevel(0).withReadingIncarnation(0)
+        .withWritingNumber(1).withWritingIncarnation(0).withHogletDB(hogletDB);
     compacter.start();
 
     DatabaseUtils dbUtils = DatabaseUtils.newDatabaseUtils(options);
 
-    assertEquals(2, dbUtils.getSSTFileCount(0));
-    assertEquals(1, dbUtils.getSSTFileCount(1));
+    assertEquals(2, dbUtils.getSSTFileCount(0, 0));
+    assertEquals(1, dbUtils.getSSTFileCount(1, 0));
 
   }
 

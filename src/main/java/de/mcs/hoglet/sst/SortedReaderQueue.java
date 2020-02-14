@@ -141,6 +141,7 @@ public class SortedReaderQueue implements AutoCloseable {
   private boolean deleteSource;
   private VLogEntryInfo lastVLogEntry;
   private List<String> tableNames;
+  private int reincarnation;
 
   public SortedReaderQueue(Options options) {
     this.readerList = new ArrayList<>();
@@ -166,13 +167,20 @@ public class SortedReaderQueue implements AutoCloseable {
     return this;
   }
 
+  public SortedReaderQueue withReincarnetion(int reincarnation) {
+    this.reincarnation = reincarnation;
+    return this;
+  }
+
   public SortedReaderQueue open() throws IOException {
     tableNames.clear();
     int number = 0;
     boolean found = true;
     while (found) {
       try {
-        SSTableReader reader = SSTableReaderFactory.getReader(options, readingLevel, number);
+        SSTIdentity identity = SSTIdentity.newSSTIdentity().withLevel(readingLevel).withIncarnation(reincarnation)
+            .withNumber(number);
+        SSTableReader reader = SSTableReaderFactory.getReader(options, identity);
         tableNames.add(reader.getTableName());
         readerList.add(new QueuedReader(reader));
         lastVLogEntry = reader.getLastVLogEntry();

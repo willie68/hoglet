@@ -22,6 +22,7 @@ import de.mcs.hoglet.Options;
 import de.mcs.hoglet.sst.MemoryTable;
 import de.mcs.hoglet.sst.MemoryTableWriter;
 import de.mcs.hoglet.sst.SSTException;
+import de.mcs.hoglet.sst.SSTIdentity;
 
 /**
  * @author wklaa_000
@@ -43,8 +44,11 @@ public class SSTUtils {
    * @throws SSTException
    *           if something goes wrong with the sst management
    */
-  public static File writeMemoryTable(Options options, int number, MemoryTable table) throws IOException, SSTException {
-    try (MemoryTableWriter writer = new MemoryTableWriter(options, 0, number)) {
+  public static File writeMemoryTable(Options options, int number, int reincarnation, MemoryTable table)
+      throws IOException, SSTException {
+    SSTIdentity identity = SSTIdentity.newSSTIdentity().withLevel(0).withNumber(number)
+        .withIncarnation(reincarnation);
+    try (MemoryTableWriter writer = new MemoryTableWriter(options, identity)) {
       writer.setLastVLogEntry(table.getLastVLogEntry());
       table.forEach(entry -> {
         try {

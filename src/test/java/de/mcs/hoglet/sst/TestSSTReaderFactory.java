@@ -61,7 +61,8 @@ class TestSSTReaderFactory {
     assertThrows(SSTException.class, new Executable() {
       @Override
       public void execute() throws Throwable {
-        try (SSTableReader reader = SSTableReaderFactory.getReader(options, 0, 0)) {
+        try (SSTableReader reader = SSTableReaderFactory.getReader(options,
+            SSTIdentity.newSSTIdentity().withLevel(0).withNumber(0).withIncarnation(0))) {
         }
       }
     });

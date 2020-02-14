@@ -57,6 +57,7 @@ class TestSSTableReaderRAF {
   private String collection = "Default";
   int level = 1;
   int number = 1;
+  int reincarnation = 1;
 
   /**
    * @throws java.lang.Exception
@@ -65,7 +66,8 @@ class TestSSTableReaderRAF {
   public static void setUp() throws Exception {
     SystemTestFolderHelper.initStatistics();
     dbFolder = SystemTestFolderHelper.newSystemTestFolderHelper().getFolder();
-    options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(100000);
+    options = Options.defaultOptions().withPath(dbFolder.getAbsolutePath()).withMemTableMaxKeys(100000)
+        .withSstIndexPreload(true);
     table = new SortedMemoryTable(options);
     ids = new QueuedIDGenerator(10000);
   }
@@ -102,7 +104,7 @@ class TestSSTableReaderRAF {
     }
 
     System.out.println("start writing SST");
-    try (MemoryTableWriter writer = new MemoryTableWriter(options, level, number)) {
+    try (MemoryTableWriter writer = new MemoryTableWriter(options, getIdentity(reincarnation))) {
       table.forEach(entry -> {
         try {
           writer.write(entry);
@@ -124,7 +126,7 @@ class TestSSTableReaderRAF {
     });
 
     Monitor mOpen = MeasureFactory.start(this, "open");
-    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, number)) {
+    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, getIdentity(reincarnation))) {
       mOpen.stop();
       SSTIdentity sstIdentity = reader.getSSTIdentity();
       assertNotNull(sstIdentity);
@@ -134,7 +136,7 @@ class TestSSTableReaderRAF {
       VLogEntryInfo lastVLogEntry = reader.getLastVLogEntry();
       assertEquals(lastEntry.getEnd(), lastVLogEntry.getEnd());
 
-      assertEquals(DatabaseUtils.getSSTFileName(level, number), reader.getTableName());
+      assertEquals(DatabaseUtils.getSSTFileName(getIdentity(reincarnation)), reader.getTableName());
       for (byte[] cs : keys) {
         MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
         Monitor m = MeasureFactory.start(this, "mightContain");
@@ -151,7 +153,7 @@ class TestSSTableReaderRAF {
     Random rnd = new Random(System.currentTimeMillis());
     long countExisting = 0;
     int savePercent = 0;
-    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, number)) {
+    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, getIdentity(reincarnation))) {
       for (int i = 0; i < MAX_DOC_TEST; i++) {
         boolean existing = rnd.nextBoolean();
         if (existing) {
@@ -202,7 +204,7 @@ class TestSSTableReaderRAF {
     newKeys.addAll(keys);
 
     long countExisting = 0;
-    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, number)) {
+    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, getIdentity(reincarnation))) {
       for (Iterator<Entry> iterator = reader.entries(); iterator.hasNext();) {
         Entry next = iterator.next();
         boolean found = false;
@@ -225,7 +227,7 @@ class TestSSTableReaderRAF {
   public void testNonExistingKeys() throws IOException, SSTException {
     System.out.println("SSTableReader: check non existing keys");
 
-    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, level, number)) {
+    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, getIdentity(reincarnation))) {
       for (int i = 0; i < 100; i++) {
         byte[] key = ids.getByteID();
         MapKey mapKey = MapKey.buildPrefixedKey(collection, key);
@@ -238,18 +240,22 @@ class TestSSTableReaderRAF {
   @Test
   public void testLevelNumber() {
     Assertions.assertThrows(SSTException.class, () -> {
-      new SSTableReaderRAF(options, -1, 0);
+      new SSTableReaderRAF(options, getIdentity(-1, 0, 0));
     });
 
     Assertions.assertThrows(SSTException.class, () -> {
-      new SSTableReaderRAF(options, 0, -1);
+      new SSTableReaderRAF(options, getIdentity(0, -1, 0));
+    });
+
+    Assertions.assertThrows(SSTException.class, () -> {
+      new SSTableReaderRAF(options, getIdentity(0, 0, -1));
     });
   }
 
   @Test
   public void testFileCreation() throws IOException, SSTException {
     Assertions.assertThrows(SSTException.class, () -> {
-      new SSTableReaderRAF(options, 2, 2);
+      new SSTableReaderRAF(options, getIdentity(2, 2, reincarnation));
     });
   }
 
@@ -275,7 +281,7 @@ class TestSSTableReaderRAF {
     int bigLevel = 1;
     int bigNumber = 4;
     System.out.println("start writing SST");
-    try (MemoryTableWriter writer = new MemoryTableWriter(options, bigLevel, bigNumber)) {
+    try (MemoryTableWriter writer = new MemoryTableWriter(options, getIdentity(bigLevel, bigNumber, reincarnation))) {
       int count = 0;
       for (byte[] cs : myKeys) {
         MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
@@ -295,7 +301,7 @@ class TestSSTableReaderRAF {
     System.out.println("checking SST");
 
     Monitor mOpen = MeasureFactory.start(this, "bigfile.open");
-    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, bigLevel, bigNumber)) {
+    try (SSTableReaderRAF reader = new SSTableReaderRAF(options, getIdentity(bigLevel, bigNumber, reincarnation))) {
       mOpen.stop();
       SSTIdentity sstIdentity = reader.getSSTIdentity();
       assertNotNull(sstIdentity);
@@ -305,7 +311,8 @@ class TestSSTableReaderRAF {
       VLogEntryInfo lastVLogEntry = reader.getLastVLogEntry();
       assertEquals(lastEntry.getEnd(), lastVLogEntry.getEnd());
 
-      assertEquals(DatabaseUtils.getSSTFileName(bigLevel, bigNumber), reader.getTableName());
+      assertEquals(DatabaseUtils.getSSTFileName(getIdentity(bigLevel, bigNumber, reincarnation)),
+          reader.getTableName());
       Random rnd = new Random(System.currentTimeMillis());
       int count = 1000;
       while (count > 0) {
@@ -328,5 +335,17 @@ class TestSSTableReaderRAF {
         count--;
       }
     }
+  }
+
+  private SSTIdentity getIdentity(int reincarnation) {
+    SSTIdentity identity = SSTIdentity.newSSTIdentity().withLevel(level).withNumber(number)
+        .withIncarnation(reincarnation);
+    return identity;
+  }
+
+  private SSTIdentity getIdentity(int mylevel, int mynumber, int reincarnation) {
+    SSTIdentity identity = SSTIdentity.newSSTIdentity().withLevel(mylevel).withNumber(mynumber)
+        .withIncarnation(reincarnation);
+    return identity;
   }
 }

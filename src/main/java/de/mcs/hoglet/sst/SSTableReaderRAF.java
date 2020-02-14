@@ -100,17 +100,14 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
   private int cacheSize;
   private File idxFile;
 
-  public SSTableReaderRAF(Options options, int level, int number, int reincarnation) throws SSTException, IOException {
+  public SSTableReaderRAF(Options options, SSTIdentity identity) throws SSTException, IOException {
     keyCount = ((long) Math.pow(options.getLvlTableCount(), level + 1)) * options.getMemTableMaxKeys();
     cacheSize = SSTableIndex.calcCacheSize(keyCount);
     this.options = options;
-    this.level = level;
-    this.number = number;
+    this.sstIdentity = identity;
     this.chunkCount = 0;
     this.missedKeys = 0;
     this.readLock = new ReentrantLock();
-    this.sstIdentity = SSTIdentity.newSSTIdentity().withNumber(number).withLevel(level)
-        .withReincarnation(reincarnation);
     init();
   }
 
@@ -145,7 +142,7 @@ public class SSTableReaderRAF implements Closeable, SSTableReader {
 
     initBloomFilter();
 
-    idxFile = databaseUtils.getSSTIndexFilePath(level, number);
+    idxFile = databaseUtils.getSSTIndexFilePath(sstIdentity);
     if (options.isSstIndexPreload()) {
       tableIndex = createIndex();
     }

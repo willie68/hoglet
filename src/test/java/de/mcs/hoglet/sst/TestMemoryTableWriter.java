@@ -101,9 +101,10 @@ class TestMemoryTableWriter {
     }
 
     System.out.println("start writing SST");
-
+    int reincarnation = 0;
+    SSTIdentity identity = SSTIdentity.newSSTIdentity().withLevel(level).withNumber(count).withIncarnation(0);
     Monitor mOpen = MeasureFactory.start("MemoryTableWriter.open");
-    try (MemoryTableWriter writer = new MemoryTableWriter(options, level, count)) {
+    try (MemoryTableWriter writer = new MemoryTableWriter(options, identity)) {
       mOpen.stop();
 
       table.forEach(entry -> {
@@ -126,7 +127,7 @@ class TestMemoryTableWriter {
 
     }
 
-    File idxFile = DatabaseUtils.getSSTIndexFilePath(dbFolder, level, count);
+    File idxFile = DatabaseUtils.getSSTIndexFilePath(dbFolder, identity);
     assertTrue(idxFile.exists());
     System.out.println("checking SST");
 
@@ -138,7 +139,7 @@ class TestMemoryTableWriter {
     });
 
     mOpen = MeasureFactory.start("SSTableReader.open");
-    try (SSTableReader reader = SSTableReaderFactory.getReader(options, level, count)) {
+    try (SSTableReader reader = SSTableReaderFactory.getReader(options, identity)) {
       mOpen.stop();
       for (byte[] cs : keys) {
         MapKey mapKey = MapKey.buildPrefixedKey(collection, cs);
@@ -156,7 +157,9 @@ class TestMemoryTableWriter {
     System.out.println("SSTableReader: check containing");
     Random rnd = new Random(System.currentTimeMillis());
     long countExisting = 0;
-    try (SSTableReader reader = SSTableReaderFactory.getReader(options, level, count)) {
+    int reincarnation = 0;
+    SSTIdentity identity = getIdentity(reincarnation);
+    try (SSTableReader reader = SSTableReaderFactory.getReader(options, identity)) {
       for (int i = 0; i < 1000; i++) {
         boolean existing = rnd.nextBoolean();
         if (existing) {
@@ -191,20 +194,37 @@ class TestMemoryTableWriter {
   @Test
   public void testLevelNumber() {
     Assertions.assertThrows(SSTException.class, () -> {
-      new MemoryTableWriter(options, -1, 0);
+
+      new MemoryTableWriter(options, getIdentity(-1, 0, 0));
     });
 
     Assertions.assertThrows(SSTException.class, () -> {
-      new MemoryTableWriter(options, 0, -1);
+      new MemoryTableWriter(options, getIdentity(0, -1, 0));
+    });
+
+    Assertions.assertThrows(SSTException.class, () -> {
+      new MemoryTableWriter(options, getIdentity(0, 0, -1));
     });
   }
 
   @Test
   public void testFileCreation() throws IOException, SSTException {
-    try (MemoryTableWriter writer = new MemoryTableWriter(options, 1, 2)) {
+    try (MemoryTableWriter writer = new MemoryTableWriter(options, getIdentity(1, 2, 0))) {
     }
     Assertions.assertThrows(SSTException.class, () -> {
-      new MemoryTableWriter(options, 1, 2);
+      new MemoryTableWriter(options, getIdentity(1, 2, 0));
     });
+  }
+
+  private SSTIdentity getIdentity(int reincarnation) {
+    SSTIdentity identity = SSTIdentity.newSSTIdentity().withLevel(level).withNumber(count)
+        .withIncarnation(reincarnation);
+    return identity;
+  }
+
+  private SSTIdentity getIdentity(int mylevel, int mynumber, int reincarnation) {
+    SSTIdentity identity = SSTIdentity.newSSTIdentity().withLevel(mylevel).withNumber(mynumber)
+        .withIncarnation(reincarnation);
+    return identity;
   }
 }
